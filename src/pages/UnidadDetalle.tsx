@@ -30,6 +30,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft,
   Building2,
@@ -43,11 +45,17 @@ import {
   Edit,
   Trash2,
   CreditCard,
+  Calculator,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Calendar,
 } from 'lucide-react';
 import { mockObras } from '@/data/mockObras';
-import { mockUnidades, mockComplementos, mockCompradores, mockPlanesPago, mockCuotas } from '@/data/mockUnidades';
+import { mockUnidades, mockComplementos, mockCompradores } from '@/data/mockUnidades';
 import { mockClientes } from '@/data/mockClientes';
-import { EstadoUnidad, EstadoPago } from '@/types';
+import { EstadoUnidad, EstadoPago, PlanPago, Cuota } from '@/types';
+import { usePlanPago } from '@/hooks/usePlanPago';
 
 const estadoConfig: Record<EstadoUnidad, { label: string; color: string }> = {
   disponible: { label: 'Disponible', color: 'bg-success text-success-foreground' },
@@ -56,26 +64,38 @@ const estadoConfig: Record<EstadoUnidad, { label: string; color: string }> = {
   bloqueada: { label: 'Bloqueada', color: 'bg-muted text-muted-foreground' },
 };
 
-const estadoPagoConfig: Record<EstadoPago, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pendiente: { label: 'Pendiente', variant: 'outline' },
-  aprobado: { label: 'Pagado', variant: 'default' },
-  rechazado: { label: 'Rechazado', variant: 'destructive' },
-  vencido: { label: 'Vencido', variant: 'destructive' },
+const estadoPagoConfig: Record<EstadoPago, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof CheckCircle2 }> = {
+  pendiente: { label: 'Pendiente', variant: 'outline', icon: Clock },
+  aprobado: { label: 'Pagado', variant: 'default', icon: CheckCircle2 },
+  rechazado: { label: 'Rechazado', variant: 'destructive', icon: AlertCircle },
+  vencido: { label: 'Vencido', variant: 'destructive', icon: AlertCircle },
 };
 
 export default function UnidadDetalle() {
   const { obraId, unidadId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('info');
   const [isCompradorDialogOpen, setIsCompradorDialogOpen] = useState(false);
   const [isComplementoDialogOpen, setIsComplementoDialogOpen] = useState(false);
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [isPagoDialogOpen, setIsPagoDialogOpen] = useState(false);
+  const [selectedCuota, setSelectedCuota] = useState<Cuota | null>(null);
+
+  // Plan de pago state
+  const [planConfig, setPlanConfig] = useState({
+    cantidadCuotas: 12,
+    anticipo: 0,
+    tasaInteres: 0,
+    fechaInicio: new Date().toISOString().split('T')[0],
+  });
 
   const obra = mockObras.find((o) => o.id === obraId);
   const unidad = mockUnidades.find((u) => u.id === unidadId);
   const complementos = mockComplementos.filter((c) => c.unidadId === unidadId);
   const compradores = mockCompradores.filter((c) => c.unidadId === unidadId);
-  const planPago = mockPlanesPago.find((p) => p.unidadId === unidadId);
-  const cuotas = planPago ? mockCuotas.filter((c) => c.planPagoId === planPago.id) : [];
+
+  const { planPago, cuotas, crearPlan, registrarPago, calcularResumen } = usePlanPago(unidadId || '');
 
   if (!obra || !unidad) {
     return (
@@ -89,17 +109,49 @@ export default function UnidadDetalle() {
     );
   }
 
-  const getClienteNombre = (clienteId: string) => {
-    const cliente = mockClientes.find((c) => c.id === clienteId);
-    return cliente?.nombre || 'Cliente no encontrado';
-  };
-
   // Calcular totales
   const totalComplementos = complementos.reduce((acc, c) => acc + c.precio, 0);
   const totalUnidad = unidad.precioLista + totalComplementos;
-  const cuotasPagadas = cuotas.filter((c) => c.estado === 'aprobado');
-  const totalPagado = cuotasPagadas.reduce((acc, c) => acc + (c.montoPagado || 0), 0);
-  const saldoPendiente = planPago ? planPago.montoTotal - totalPagado : totalUnidad;
+  const resumen = calcularResumen(totalUnidad);
+
+  const handleCrearPlan = () => {
+    crearPlan({
+      montoTotal: totalUnidad - planConfig.anticipo,
+      cantidadCuotas: planConfig.cantidadCuotas,
+      tasaInteres: planConfig.tasaInteres,
+      fechaInicio: planConfig.fechaInicio,
+      anticipo: planConfig.anticipo,
+    });
+    setIsPlanDialogOpen(false);
+    toast({
+      title: "Plan de pagos creado",
+      description: `Se generaron ${planConfig.cantidadCuotas} cuotas correctamente.`,
+    });
+  };
+
+  const handleRegistrarPago = (montoPagado: number) => {
+    if (selectedCuota) {
+      registrarPago(selectedCuota.id, montoPagado);
+      setIsPagoDialogOpen(false);
+      setSelectedCuota(null);
+      toast({
+        title: "Pago registrado",
+        description: `Se registró el pago de USD ${montoPagado.toLocaleString()}.`,
+      });
+    }
+  };
+
+  const calcularCuotaPreview = () => {
+    const montoFinanciar = totalUnidad - planConfig.anticipo;
+    const interesMensual = planConfig.tasaInteres / 100;
+    if (interesMensual === 0) {
+      return montoFinanciar / planConfig.cantidadCuotas;
+    }
+    // Fórmula de cuota fija con interés
+    const cuota = montoFinanciar * (interesMensual * Math.pow(1 + interesMensual, planConfig.cantidadCuotas)) /
+      (Math.pow(1 + interesMensual, planConfig.cantidadCuotas) - 1);
+    return cuota;
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -154,9 +206,9 @@ export default function UnidadDetalle() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {unidad.moneda} {unidad.precioLista.toLocaleString()}
+                  USD {totalUnidad.toLocaleString()}
                 </p>
-                <p className="text-sm text-muted-foreground">Precio Lista</p>
+                <p className="text-sm text-muted-foreground">Precio Total</p>
               </div>
             </div>
           </CardContent>
@@ -498,42 +550,212 @@ export default function UnidadDetalle() {
         {/* Plan de Pagos Tab */}
         <TabsContent value="pagos" className="mt-6">
           <div className="space-y-6">
-            {/* Resumen */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
+            {/* Resumen de Deuda */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card className="bg-muted/30">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Monto Total</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Monto Total</p>
+                  </div>
                   <p className="text-2xl font-bold">
-                    USD {planPago?.montoTotal.toLocaleString() || totalUnidad.toLocaleString()}
+                    USD {resumen.montoTotal.toLocaleString()}
                   </p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="bg-success/10 border-success/20">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Total Pagado</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <p className="text-sm text-muted-foreground">Pagado</p>
+                  </div>
                   <p className="text-2xl font-bold text-success">
-                    USD {totalPagado.toLocaleString()}
+                    USD {resumen.totalPagado.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {resumen.cuotasPagadas} de {resumen.totalCuotas} cuotas
                   </p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="bg-warning/10 border-warning/20">
                 <CardContent className="pt-6">
-                  <p className="text-sm text-muted-foreground">Saldo Pendiente</p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="h-4 w-4 text-warning" />
+                    <p className="text-sm text-muted-foreground">Saldo Pendiente</p>
+                  </div>
                   <p className="text-2xl font-bold text-warning">
-                    USD {saldoPendiente.toLocaleString()}
+                    USD {resumen.saldoPendiente.toLocaleString()}
                   </p>
+                </CardContent>
+              </Card>
+              <Card className={resumen.cuotasVencidas > 0 ? "bg-destructive/10 border-destructive/20" : ""}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className={`h-4 w-4 ${resumen.cuotasVencidas > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+                    <p className="text-sm text-muted-foreground">Cuotas Vencidas</p>
+                  </div>
+                  <p className={`text-2xl font-bold ${resumen.cuotasVencidas > 0 ? 'text-destructive' : ''}`}>
+                    {resumen.cuotasVencidas}
+                  </p>
+                  {resumen.montoVencido > 0 && (
+                    <p className="text-xs text-destructive mt-1">
+                      USD {resumen.montoVencido.toLocaleString()} vencido
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Cuotas */}
+            {/* Progreso */}
+            {planPago && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Progreso de pago</span>
+                    <span className="text-sm text-muted-foreground">
+                      {Math.round(resumen.porcentajePagado)}%
+                    </span>
+                  </div>
+                  <Progress value={resumen.porcentajePagado} className="h-3" />
+                  <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                    <span>USD {resumen.totalPagado.toLocaleString()} pagado</span>
+                    <span>USD {resumen.saldoPendiente.toLocaleString()} restante</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Cuotas o Crear Plan */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Cuotas</CardTitle>
-                {!planPago && (
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crear Plan de Pagos
+                <CardTitle>
+                  {planPago ? `Plan de Pagos - ${planPago.cantidadCuotas} cuotas` : 'Plan de Pagos'}
+                </CardTitle>
+                {!planPago ? (
+                  <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Crear Plan de Pagos
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Crear Plan de Pagos</DialogTitle>
+                        <DialogDescription>
+                          Configure las condiciones del plan de financiación.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        {/* Resumen del monto */}
+                        <div className="p-4 rounded-lg bg-muted">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span>Precio unidad:</span>
+                            <span>USD {unidad.precioLista.toLocaleString()}</span>
+                          </div>
+                          {totalComplementos > 0 && (
+                            <div className="flex justify-between text-sm mb-1">
+                              <span>Complementos:</span>
+                              <span>USD {totalComplementos.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-medium pt-2 border-t mt-2">
+                            <span>Total:</span>
+                            <span>USD {totalUnidad.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="anticipo">Anticipo (USD)</Label>
+                            <Input
+                              id="anticipo"
+                              type="number"
+                              value={planConfig.anticipo}
+                              onChange={(e) => setPlanConfig({ ...planConfig, anticipo: Number(e.target.value) })}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="cuotas">Cantidad de cuotas</Label>
+                            <Select
+                              value={String(planConfig.cantidadCuotas)}
+                              onValueChange={(v) => setPlanConfig({ ...planConfig, cantidadCuotas: Number(v) })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[6, 12, 18, 24, 30, 36, 48, 60].map((n) => (
+                                  <SelectItem key={n} value={String(n)}>{n} cuotas</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                            <Label htmlFor="interes">Tasa de interés mensual (%)</Label>
+                            <Input
+                              id="interes"
+                              type="number"
+                              step="0.1"
+                              value={planConfig.tasaInteres}
+                              onChange={(e) => setPlanConfig({ ...planConfig, tasaInteres: Number(e.target.value) })}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label htmlFor="fechaInicio">Fecha primera cuota</Label>
+                            <Input
+                              id="fechaInicio"
+                              type="date"
+                              value={planConfig.fechaInicio}
+                              onChange={(e) => setPlanConfig({ ...planConfig, fechaInicio: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Preview del cálculo */}
+                        <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                          <p className="text-sm font-medium mb-2">Vista previa del plan</p>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">A financiar:</span>
+                            </div>
+                            <div className="text-right font-medium">
+                              USD {(totalUnidad - planConfig.anticipo).toLocaleString()}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Valor cuota:</span>
+                            </div>
+                            <div className="text-right font-medium">
+                              USD {calcularCuotaPreview().toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Total a pagar:</span>
+                            </div>
+                            <div className="text-right font-medium">
+                              USD {(planConfig.anticipo + calcularCuotaPreview() * planConfig.cantidadCuotas).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsPlanDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleCrearPlan}>
+                          Crear Plan
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Plan
                   </Button>
                 )}
               </CardHeader>
@@ -541,56 +763,79 @@ export default function UnidadDetalle() {
                 {cuotas.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No hay plan de pagos para esta unidad.</p>
+                    <p className="mb-2">No hay plan de pagos para esta unidad.</p>
+                    <p className="text-sm">Cree un plan para generar las cuotas automáticamente.</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Cuota</TableHead>
+                        <TableHead className="w-[80px]">Cuota</TableHead>
                         <TableHead>Vencimiento</TableHead>
                         <TableHead>Monto</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead>Fecha Pago</TableHead>
-                        <TableHead className="w-[100px]">Acciones</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {cuotas.map((cuota) => (
-                        <TableRow key={cuota.id}>
-                          <TableCell className="font-medium">
-                            #{cuota.numero}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(cuota.fechaVencimiento).toLocaleDateString('es-AR')}
-                          </TableCell>
-                          <TableCell>
-                            {cuota.moneda} {cuota.monto.toLocaleString()}
-                            {cuota.interesMora && (
-                              <span className="text-xs text-destructive ml-1">
-                                (+{cuota.interesMora} mora)
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={estadoPagoConfig[cuota.estado].variant}>
-                              {estadoPagoConfig[cuota.estado].label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {cuota.fechaPago
-                              ? new Date(cuota.fechaPago).toLocaleDateString('es-AR')
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {cuota.estado !== 'aprobado' && (
-                              <Button variant="outline" size="sm">
-                                Registrar Pago
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {cuotas.map((cuota) => {
+                        const StatusIcon = estadoPagoConfig[cuota.estado].icon;
+                        return (
+                          <TableRow key={cuota.id} className={cuota.estado === 'vencido' ? 'bg-destructive/5' : ''}>
+                            <TableCell className="font-medium">
+                              #{cuota.numero}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                {new Date(cuota.fechaVencimiento).toLocaleDateString('es-AR')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                USD {cuota.monto.toLocaleString()}
+                                {cuota.interesMora && cuota.interesMora > 0 && (
+                                  <span className="text-xs text-destructive block">
+                                    +USD {cuota.interesMora} interés mora
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={estadoPagoConfig[cuota.estado].variant} className="gap-1">
+                                <StatusIcon className="h-3 w-3" />
+                                {estadoPagoConfig[cuota.estado].label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {cuota.fechaPago
+                                ? new Date(cuota.fechaPago).toLocaleDateString('es-AR')
+                                : '-'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {cuota.estado !== 'aprobado' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedCuota(cuota);
+                                    setIsPagoDialogOpen(true);
+                                  }}
+                                >
+                                  Registrar Pago
+                                </Button>
+                              )}
+                              {cuota.estado === 'aprobado' && (
+                                <span className="text-sm text-success flex items-center justify-end gap-1">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  Pagado
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -618,6 +863,102 @@ export default function UnidadDetalle() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para registrar pago */}
+      <Dialog open={isPagoDialogOpen} onOpenChange={setIsPagoDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Pago</DialogTitle>
+            <DialogDescription>
+              {selectedCuota && (
+                <>Cuota #{selectedCuota.numero} - Vence: {new Date(selectedCuota.fechaVencimiento).toLocaleDateString('es-AR')}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCuota && (
+            <RegistrarPagoForm
+              cuota={selectedCuota}
+              onConfirm={handleRegistrarPago}
+              onCancel={() => {
+                setIsPagoDialogOpen(false);
+                setSelectedCuota(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+// Componente separado para el formulario de registro de pago
+function RegistrarPagoForm({
+  cuota,
+  onConfirm,
+  onCancel,
+}: {
+  cuota: Cuota;
+  onConfirm: (monto: number) => void;
+  onCancel: () => void;
+}) {
+  const montoTotal = cuota.monto + (cuota.interesMora || 0);
+  const [montoPagado, setMontoPagado] = useState(montoTotal);
+  const [metodoPago, setMetodoPago] = useState('transferencia');
+
+  return (
+    <>
+      <div className="grid gap-4 py-4">
+        <div className="p-4 rounded-lg bg-muted">
+          <div className="flex justify-between text-sm mb-1">
+            <span>Monto cuota:</span>
+            <span>USD {cuota.monto.toLocaleString()}</span>
+          </div>
+          {cuota.interesMora && cuota.interesMora > 0 && (
+            <div className="flex justify-between text-sm mb-1 text-destructive">
+              <span>Interés por mora:</span>
+              <span>USD {cuota.interesMora.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-medium pt-2 border-t mt-2">
+            <span>Total a pagar:</span>
+            <span>USD {montoTotal.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="montoPago">Monto pagado (USD)</Label>
+          <Input
+            id="montoPago"
+            type="number"
+            value={montoPagado}
+            onChange={(e) => setMontoPagado(Number(e.target.value))}
+          />
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="metodoPago">Método de pago</Label>
+          <Select value={metodoPago} onValueChange={setMetodoPago}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="transferencia">Transferencia bancaria</SelectItem>
+              <SelectItem value="efectivo">Efectivo</SelectItem>
+              <SelectItem value="cheque">Cheque</SelectItem>
+              <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button onClick={() => onConfirm(montoPagado)}>
+          <CheckCircle2 className="h-4 w-4 mr-2" />
+          Confirmar Pago
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
