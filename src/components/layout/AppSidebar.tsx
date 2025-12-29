@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Sidebar,
@@ -25,8 +25,10 @@ import {
   StickyNote,
   Settings,
   HardHat,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard, module: 'dashboard' },
@@ -157,7 +159,17 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
+        <Button
+          asChild
+          variant="outline"
+          className="w-full justify-start gap-2 text-sidebar-foreground/80 border-sidebar-border hover:bg-sidebar-accent"
+        >
+          <Link to="/portal/login" target="_blank">
+            <ExternalLink className="h-4 w-4" />
+            Portal del Cliente
+          </Link>
+        </Button>
         <p className="text-xs text-sidebar-foreground/50 text-center">
           Nato Obras v1.0 • Prototipo Demo
         </p>
