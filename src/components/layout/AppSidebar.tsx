@@ -69,7 +69,7 @@ export function AppSidebar() {
             <HardHat className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           <div>
-            <h1 className="font-semibold text-sidebar-foreground">SGO</h1>
+            <h1 className="font-semibold text-sidebar-foreground">Nato Obras</h1>
             <p className="text-xs text-sidebar-foreground/60">Gestión de Obras</p>
           </div>
         </div>
@@ -159,7 +159,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <p className="text-xs text-sidebar-foreground/50 text-center">
-          SGO v1.0 • Prototipo Demo
+          Nato Obras v1.0 • Prototipo Demo
         </p>
       </SidebarFooter>
     </Sidebar>
