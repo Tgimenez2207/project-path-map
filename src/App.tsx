@@ -11,6 +11,7 @@ import Obras from "@/pages/Obras";
 import ObraDetalle from "@/pages/ObraDetalle";
 import Unidades from "@/pages/Unidades";
 import UnidadDetalle from "@/pages/UnidadDetalle";
+import AvanceObra from "@/pages/AvanceObra";
 import Presupuestos from "@/pages/Presupuestos";
 import Clientes from "@/pages/Clientes";
 import Proveedores from "@/pages/Proveedores";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="obras/:obraId" element={<ObraDetalle />} />
               <Route path="obras/:obraId/unidades" element={<Unidades />} />
               <Route path="obras/:obraId/unidades/:unidadId" element={<UnidadDetalle />} />
+              <Route path="obras/:obraId/avance" element={<AvanceObra />} />
               <Route path="presupuestos" element={<Presupuestos />} />
               <Route path="clientes" element={<Clientes />} />
               <Route path="proveedores" element={<Proveedores />} />
