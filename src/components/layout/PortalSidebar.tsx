@@ -37,7 +37,7 @@ export function PortalSidebar() {
           </div>
           <div>
             <h1 className="font-semibold text-foreground">Portal Cliente</h1>
-            <p className="text-xs text-muted-foreground">SGO</p>
+            <p className="text-xs text-muted-foreground">Nato Obras</p>
           </div>
         </div>
       </div>
@@ -74,7 +74,7 @@ export function PortalSidebar() {
       {/* Footer */}
       <div className="p-4 border-t">
         <p className="text-xs text-muted-foreground text-center">
-          Portal del Cliente v1.0
+          Nato Obras • Portal v1.0
         </p>
       </div>
     </aside>
