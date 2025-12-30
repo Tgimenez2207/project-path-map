@@ -21,41 +21,41 @@ export function PortalHeader() {
   };
 
   return (
-    <header className="h-14 border-b bg-card flex items-center justify-between px-6">
+    <header className="h-16 border-b border-border/50 bg-card flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+        <Badge className="badge-rappi">
           PORTAL CLIENTE
         </Badge>
       </div>
 
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-4 w-4 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
+        <Button variant="ghost" size="icon" className="relative rounded-xl hover:bg-accent">
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          <span className="absolute -top-1 -right-1 h-5 w-5 gradient-rappi text-white text-xs rounded-full flex items-center justify-center font-semibold shadow-sm">
             2
           </span>
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+            <Button variant="ghost" className="flex items-center gap-2 rounded-xl hover:bg-accent">
+              <div className="h-9 w-9 rounded-xl gradient-rappi flex items-center justify-center text-white font-semibold shadow-sm">
                 {cliente?.nombre?.charAt(0) || 'U'}
               </div>
-              <span className="hidden md:block text-sm font-medium">
+              <span className="hidden md:block text-sm font-semibold text-foreground">
                 {cliente?.nombre?.split(' ')[0]}
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem className="flex items-center gap-2">
+          <DropdownMenuContent align="end" className="w-48 rounded-xl">
+            <DropdownMenuItem className="flex items-center gap-2 rounded-lg">
               <User className="h-4 w-4" />
               Mi Perfil
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="flex items-center gap-2 text-destructive"
+              className="flex items-center gap-2 text-destructive rounded-lg"
               onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />

@@ -64,37 +64,40 @@ export function AppSidebar() {
     items.filter((item) => canAccess(item.module));
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
+    <Sidebar className="border-r border-sidebar-border bg-sidebar">
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <HardHat className="h-5 w-5 text-sidebar-primary-foreground" />
+          <div className="h-10 w-10 rounded-2xl gradient-rappi flex items-center justify-center shadow-md">
+            <HardHat className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="font-semibold text-sidebar-foreground">Nato Obras</h1>
+            <h1 className="font-bold text-sidebar-foreground">Nato Obras</h1>
             <p className="text-xs text-sidebar-foreground/60">Gestión de Obras</p>
           </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-3">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-2">
+          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-2 mb-2">
             Principal
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {filterByAccess(menuItems).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors',
-                        isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200',
+                        isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
                       )}
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className={cn(
+                        "h-5 w-5 transition-colors",
+                        isActive(item.url) ? "text-primary" : "text-sidebar-foreground/50"
+                      )} />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -104,23 +107,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-2">
+        <SidebarGroup className="mt-4">
+          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-2 mb-2">
             Adicionales
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {filterByAccess(extraItems).map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors',
-                        isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200',
+                        isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
                       )}
                     >
-                      <item.icon className="h-4 w-4" />
+                      <item.icon className={cn(
+                        "h-5 w-5 transition-colors",
+                        isActive(item.url) ? "text-primary" : "text-sidebar-foreground/50"
+                      )} />
                       <span>{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
@@ -131,23 +137,26 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {role === 'admin' && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-2">
+          <SidebarGroup className="mt-4">
+            <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs uppercase tracking-wider px-2 mb-2">
               Administración
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="space-y-1">
                 {adminItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors',
-                          isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200',
+                          isActive(item.url) && 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
                         )}
                       >
-                        <item.icon className="h-4 w-4" />
+                        <item.icon className={cn(
+                          "h-5 w-5 transition-colors",
+                          isActive(item.url) ? "text-primary" : "text-sidebar-foreground/50"
+                        )} />
                         <span>{item.title}</span>
                       </NavLink>
                     </SidebarMenuButton>
@@ -162,8 +171,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t border-sidebar-border space-y-3">
         <Button
           asChild
-          variant="outline"
-          className="w-full justify-start gap-2 text-sidebar-foreground/80 border-sidebar-border hover:bg-sidebar-accent"
+          className="w-full justify-start gap-2 rounded-xl btn-rappi gradient-rappi text-white border-0 hover:opacity-90"
         >
           <Link to="/portal/login" target="_blank">
             <ExternalLink className="h-4 w-4" />
