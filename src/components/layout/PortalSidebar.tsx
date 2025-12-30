@@ -28,28 +28,28 @@ export function PortalSidebar() {
   };
 
   return (
-    <aside className="w-64 bg-card border-r flex flex-col">
+    <aside className="w-64 bg-card border-r border-border/50 flex flex-col shadow-sm">
       {/* Header */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b border-border/50">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
-            <HardHat className="h-5 w-5 text-primary-foreground" />
+          <div className="h-11 w-11 rounded-2xl gradient-rappi flex items-center justify-center shadow-md">
+            <HardHat className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="font-semibold text-foreground">Portal Cliente</h1>
+            <h1 className="font-bold text-foreground">Portal Cliente</h1>
             <p className="text-xs text-muted-foreground">Nato Obras</p>
           </div>
         </div>
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-b bg-muted/30">
-        <p className="text-sm font-medium">{cliente?.nombre}</p>
+      <div className="p-4 border-b border-border/50 bg-accent/30">
+        <p className="text-sm font-semibold text-foreground">{cliente?.nombre}</p>
         <p className="text-xs text-muted-foreground">{cliente?.email}</p>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-3">
         <ul className="space-y-1">
           {menuItems.map((item) => (
             <li key={item.title}>
@@ -57,13 +57,16 @@ export function PortalSidebar() {
                 to={item.url}
                 end={item.url === '/portal'}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors',
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200',
                   isActive(item.url)
-                    ? 'bg-primary text-primary-foreground font-medium'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'gradient-rappi text-white font-semibold shadow-md'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className={cn(
+                  "h-5 w-5",
+                  isActive(item.url) ? "text-white" : "text-muted-foreground/70"
+                )} />
                 <span>{item.title}</span>
               </NavLink>
             </li>
@@ -72,7 +75,7 @@ export function PortalSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t border-border/50">
         <p className="text-xs text-muted-foreground text-center">
           Nato Obras • Portal v1.0
         </p>
