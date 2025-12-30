@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +21,17 @@ import { mockCompradores } from '@/data/mockUnidades';
 function PortalLoginContent() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, loginWithEmail } = usePortal();
+  const { login, loginWithEmail, isAuthenticated } = usePortal();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedCliente, setSelectedCliente] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/portal', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // Obtener clientes que tienen unidades (compradores)
   const clientesConUnidades = mockClientes.filter((cliente) =>
@@ -45,7 +51,7 @@ function PortalLoginContent() {
         title: 'Bienvenido',
         description: 'Ingreso exitoso al portal.',
       });
-      navigate('/portal');
+      navigate('/portal', { replace: true });
     } else {
       toast({
         title: 'Error de autenticación',
@@ -72,7 +78,7 @@ function PortalLoginContent() {
         title: 'Modo Demo',
         description: 'Ingresando como cliente de demostración.',
       });
-      navigate('/portal');
+      navigate('/portal', { replace: true });
     }
   };
 
