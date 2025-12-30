@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { HardHat, Mail, Lock, User } from 'lucide-react';
-import { PortalProvider, usePortal } from '@/contexts/PortalContext';
+import { usePortal } from '@/contexts/PortalContext';
 import { mockClientes } from '@/data/mockClientes';
 import { mockCompradores } from '@/data/mockUnidades';
 
@@ -197,9 +197,5 @@ function PortalLoginContent() {
 }
 
 export default function PortalLogin() {
-  return (
-    <PortalProvider>
-      <PortalLoginContent />
-    </PortalProvider>
-  );
+  return <PortalLoginContent />;
 }

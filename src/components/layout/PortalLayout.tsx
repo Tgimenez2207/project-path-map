@@ -1,9 +1,9 @@
 import { Outlet, Navigate } from 'react-router-dom';
-import { PortalProvider, usePortal } from '@/contexts/PortalContext';
+import { usePortal } from '@/contexts/PortalContext';
 import { PortalSidebar } from './PortalSidebar';
 import { PortalHeader } from './PortalHeader';
 
-function PortalLayoutContent() {
+export function PortalLayout() {
   const { isAuthenticated } = usePortal();
 
   if (!isAuthenticated) {
@@ -20,13 +20,5 @@ function PortalLayoutContent() {
         </main>
       </div>
     </div>
-  );
-}
-
-export function PortalLayout() {
-  return (
-    <PortalProvider>
-      <PortalLayoutContent />
-    </PortalProvider>
   );
 }

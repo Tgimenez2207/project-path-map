@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PortalProvider } from "@/contexts/PortalContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PortalLayout } from "@/components/layout/PortalLayout";
 import Dashboard from "@/pages/Dashboard";
@@ -30,6 +31,15 @@ import PortalAvance from "@/pages/portal/PortalAvance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+// Wrapper para las rutas del portal con contexto compartido
+function PortalWrapper() {
+  return (
+    <PortalProvider>
+      <Outlet />
+    </PortalProvider>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -58,14 +68,16 @@ const App = () => (
               <Route path="usuarios" element={<Usuarios />} />
             </Route>
 
-            {/* Portal del Cliente Routes */}
-            <Route path="/portal/login" element={<PortalLogin />} />
-            <Route path="/portal" element={<PortalLayout />}>
-              <Route index element={<PortalDashboard />} />
-              <Route path="unidades" element={<PortalUnidades />} />
-              <Route path="pagos" element={<PortalPagos />} />
-              <Route path="documentos" element={<PortalDocumentos />} />
-              <Route path="avance" element={<PortalAvance />} />
+            {/* Portal del Cliente Routes - Con contexto compartido */}
+            <Route element={<PortalWrapper />}>
+              <Route path="/portal/login" element={<PortalLogin />} />
+              <Route path="/portal" element={<PortalLayout />}>
+                <Route index element={<PortalDashboard />} />
+                <Route path="unidades" element={<PortalUnidades />} />
+                <Route path="pagos" element={<PortalPagos />} />
+                <Route path="documentos" element={<PortalDocumentos />} />
+                <Route path="avance" element={<PortalAvance />} />
+              </Route>
             </Route>
 
             <Route path="*" element={<NotFound />} />
