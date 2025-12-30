@@ -69,9 +69,11 @@ const App = () => (
             </Route>
 
             {/* Portal del Cliente Routes - Con contexto compartido */}
-            <Route element={<PortalWrapper />}>
-              <Route path="/portal/login" element={<PortalLogin />} />
-              <Route path="/portal" element={<PortalLayout />}>
+            <Route path="/portal" element={<PortalWrapper />}>
+              <Route path="login" element={<PortalLogin />} />
+
+              {/* Rutas protegidas del portal */}
+              <Route element={<PortalLayout />}>
                 <Route index element={<PortalDashboard />} />
                 <Route path="unidades" element={<PortalUnidades />} />
                 <Route path="pagos" element={<PortalPagos />} />
