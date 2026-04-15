@@ -1,49 +1,55 @@
 
 
-# Plan: Módulo de Proveedores con IA
+# Plan: Consolidar IA en un Hub Central
 
-## Resumen
-Reemplazar completamente `src/pages/Proveedores.tsx` con un módulo avanzado que incluye evaluaciones, cotizaciones, análisis IA, y comparación entre proveedores. Se usa estado local con mock data (sin nuevas tablas en DB). Se crea una edge function para el análisis IA.
+## Problema actual
+La IA está dispersa en 5 lugares distintos sin conexión clara:
+1. **Sidebar "IA Copilot"** → `/ia` (IAPanel.tsx) — solo muestra alertas por obra, redundante con el tab IA de ObraDetalle
+2. **Tab "IA" en ObraDetalle** → IACopilotTab.tsx — chat + alertas por obra
+3. **MarketingDialog** en ObraDetalle — genera contenido marketing
+4. **Proveedores** — análisis, comparación y chat IA inline
+5. **Simulador de Rinde** — análisis IA del rinde
 
-## Archivos a crear/modificar
+El IAPanel de la sidebar es el más débil: solo replica alertas que ya están en cada obra. No agrega valor.
 
-### 1. Crear `src/types/proveedores.ts`
-Tipos `Proveedor`, `Evaluacion`, `Cotizacion`, `RubroProveedor`, `EstadoProveedor` exactamente como se especifica.
+## Solución
+Transformar `/ia` (IAPanel.tsx) en un **Hub de IA centralizado** que sirva como punto de entrada único, con accesos directos a todas las funcionalidades IA del sistema.
 
-### 2. Crear `src/data/mockProveedores.ts`
-8-10 proveedores con rubros variados, 2-3 evaluaciones y 1-2 cotizaciones cada uno. Datos realistas del mercado argentino.
+## Cambios a realizar
 
-### 3. Crear `supabase/functions/ai-proveedores/index.ts`
-Edge function que usa Lovable AI Gateway (no Anthropic directo). Soporta dos modos:
-- `analizar`: análisis individual de un proveedor
-- `comparar`: recomendación entre proveedores seleccionados
+### 1. Reescribir `src/pages/IAPanel.tsx` como Hub de IA
 
-Reutiliza el patrón de `ai-rinde` con CORS headers y manejo de 429/402.
+Nueva estructura con 3 secciones:
 
-### 4. Reemplazar `src/pages/Proveedores.tsx`
-Componente completo con:
-- **Estado local** con `useState` para proveedores (mock), filtros, selección, detalle
-- **Header** con contadores y botón "Comparar" (visible cuando hay 2+ seleccionados)
-- **Barra de filtros**: búsqueda + select rubro + select estado + select ordenar
-- **4 KPIs**: activos, rating promedio, cotizaciones del mes, en evaluación
-- **Grid de cards** (2 cols desktop, 1 mobile) con checkbox de selección, rating con estrellas Unicode, badges por rubro con colores, botones "Ver detalle" y "Analizar con IA"
-- **Sheet de detalle** (shadcn Sheet desde la derecha) con 4 tabs:
-  - Resumen (contacto, notas, resumen IA)
-  - Evaluaciones (lista + formulario nueva evaluación con sliders 1-5)
-  - Cotizaciones (tabla + formulario nueva cotización)
-  - IA (chat contextual del proveedor via edge function)
-- **Dialog de comparación** (max-w-4xl) con tabla comparativa, celdas ganadoras en verde, botón "Que la IA recomiende"
-- **Dialog nuevo proveedor** con todos los campos del spec
-- **Función `calcularRating`** como se especifica
-- Formateo con `toLocaleString('es-AR')`, inputs `min={0}`
+**a) Chat IA general (protagonista)**
+Un copilot conversacional que no está atado a una obra específica. Usa la edge function `ai-copilot` existente pero con un system prompt genérico sobre gestión de obras. El usuario puede preguntar sobre cualquier tema del negocio. Streaming con el mismo patrón de IACopilotTab.
 
-### 5. Agregar estilos mobile
-FAB fijo en mobile cuando hay proveedores seleccionados para el botón "Comparar".
+**b) Accesos directos a funcionalidades IA**
+Grid de cards que linkean a cada feature IA existente:
+- "Analizar obra" → navega a `/obras/:id` tab IA
+- "Comparar proveedores" → navega a `/proveedores`
+- "Simular rinde" → navega a `/simulador`
+- "Generar contenido" → navega a `/obras/:id` (marketing)
+
+Cada card muestra icono, título, descripción corta de qué hace.
+
+**c) Resumen de alertas cross-obra**
+Mantener la funcionalidad actual de IAPanel (analizar todas las obras) pero como sección colapsable secundaria, no como feature principal.
+
+### 2. Renombrar en sidebar
+Cambiar "IA Copilot" → "Asistente IA" en `AppSidebar.tsx` para diferenciarlo del copilot contextual de cada obra.
+
+### 3. Crear edge function `ai-assistant` (o reutilizar `ai-copilot`)
+Adaptar `ai-copilot` para que funcione sin `obraContext` obligatorio (hacerlo opcional). Si no recibe contexto de obra, usa un prompt genérico de experto en construcción. Esto evita crear otra edge function.
+
+## Archivos a modificar
+- `src/pages/IAPanel.tsx` — reescribir completo
+- `src/components/layout/AppSidebar.tsx` — renombrar label
+- `supabase/functions/ai-copilot/index.ts` — hacer `obraContext` opcional
 
 ## Detalles técnicos
-
-- **IA**: Edge function `ai-proveedores` usa `LOVABLE_API_KEY` + Lovable AI Gateway con `google/gemini-3-flash-preview`
-- **Sin migraciones DB**: Todo el módulo usa estado local con mock data (el spec no pide persistencia en Supabase para las nuevas entidades evaluaciones/cotizaciones)
-- **La tabla `proveedores` existente en Supabase no se usa** en esta nueva versión -- el spec pide mock data con estructura diferente
-- **Sidebar**: Ya tiene el item "Proveedores" con ícono `Truck`, se mantiene
+- El chat general reutiliza el patrón de streaming SSE existente en IACopilotTab
+- Los mensajes del chat general se persisten en localStorage con key `ia-assistant-general`
+- No se crean tablas nuevas ni migraciones
+- Las funcionalidades IA en Proveedores, Simulador y ObraDetalle quedan intactas — solo se agrega un hub que las conecta
 
