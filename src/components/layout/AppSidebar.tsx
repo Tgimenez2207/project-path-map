@@ -28,6 +28,7 @@ import {
   ExternalLink,
   Sparkles,
   Calculator,
+  Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ const menuItems = [
   { title: 'Flota', url: '/flota', icon: Car, module: 'flota' },
   { title: 'Asistente IA', url: '/ia', icon: Sparkles, module: 'ia' },
   { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
+  { title: 'Noticias del sector', url: '/noticias', icon: Newspaper, module: 'noticias' },
 ];
 
 const extraItems = [
