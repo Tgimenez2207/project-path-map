@@ -20,7 +20,7 @@ const COLORS = ['hsl(24, 100%, 50%)', 'hsl(142, 71%, 45%)', 'hsl(48, 96%, 53%)',
 const PIE_COLORS = ['hsl(142, 71%, 45%)', 'hsl(48, 96%, 53%)', 'hsl(24, 100%, 50%)', 'hsl(220, 10%, 70%)'];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { data: obras = [], isLoading: obrasLoading } = useObras();
   const { data: unidades = [] } = useUnidades();
   const { data: clientes = [] } = useClientes();
