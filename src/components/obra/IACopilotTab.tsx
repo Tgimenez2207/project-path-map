@@ -31,9 +31,20 @@ interface IACopilotTabProps {
 }
 
 export default function IACopilotTab({ obra, etapas, tareas, bitacora }: IACopilotTabProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const storageKey = `ia-copilot-${obra.id}`;
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify(messages));
+  }, [messages, storageKey]);
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [alertasLoading, setAlertasLoading] = useState(true);
   const [chatOpen, setChatOpen] = useState(true);
