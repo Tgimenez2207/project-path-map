@@ -58,7 +58,7 @@ export default function Flota() {
   // Vehicle CRUD
   const openNewV = () => { setVForm(emptyVehiculo); setVEditId(null); setVOpen(true); };
   const openEditV = (v: Tables<'vehiculos'>) => {
-    setVForm({ patente: v.patente, marca: v.marca, modelo: v.modelo, anio: v.anio, tipo: v.tipo, estado: v.estado, kilometraje: v.kilometraje, proximo_vencimiento: v.proximo_vencimiento || '', tipo_vencimiento: v.tipo_vencimiento || '' });
+    setVForm({ patente: v.patente, marca: v.marca, modelo: v.modelo, anio: v.anio, tipo: v.tipo as TipoVehiculo, estado: v.estado as EstadoVehiculo, kilometraje: v.kilometraje, proximo_vencimiento: v.proximo_vencimiento || '', tipo_vencimiento: v.tipo_vencimiento || '' });
     setVEditId(v.id); setVOpen(true);
   };
   const saveV = async () => {
