@@ -13,7 +13,10 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `Sos un copilot experto en gestión de obras de construcción en Argentina. 
+    let systemPrompt: string;
+
+    if (obraContext) {
+      systemPrompt = `Sos un copilot experto en gestión de obras de construcción en Argentina. 
 Tenés acceso a los datos reales de la obra y respondés preguntas en español rioplatense de forma concisa y accionable.
 Cuando detectes desvíos o riesgos, los mencionás proactivamente.
 
@@ -25,6 +28,19 @@ Estado: ${obraContext.estado}
 Etapas: ${JSON.stringify(obraContext.etapas)}
 Tareas: ${JSON.stringify(obraContext.tareas)}
 Bitácora reciente: ${JSON.stringify(obraContext.bitacora)}`;
+    } else {
+      systemPrompt = `Sos un asistente experto en gestión de empresas constructoras y desarrollo inmobiliario en Argentina.
+Respondés en español rioplatense de forma concisa, práctica y accionable.
+Podés ayudar con:
+- Planificación y seguimiento de obras
+- Gestión de proveedores y contratistas
+- Análisis de costos y presupuestos
+- Normativa y regulaciones de construcción en Argentina
+- Gestión de equipos y recursos
+- Comercialización inmobiliaria
+- Finanzas y flujo de caja de proyectos
+Siempre que sea posible, dás ejemplos concretos y números de referencia del mercado argentino.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
