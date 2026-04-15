@@ -1,14 +1,28 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { User, UserRole } from '@/types';
-import { mockUsers } from '@/data/mockUsers';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { User as SupaUser, Session } from '@supabase/supabase-js';
+
+export type AppRole = 'admin' | 'operaciones' | 'finanzas' | 'ventas' | 'cliente';
+
+export interface UserProfile {
+  id: string;
+  user_id: string;
+  nombre: string;
+  email: string | null;
+  avatar_url: string | null;
+}
 
 interface AuthContextType {
-  user: User | null;
-  role: UserRole;
+  user: SupaUser | null;
+  profile: UserProfile | null;
+  role: AppRole;
+  session: Session | null;
   isAuthenticated: boolean;
-  login: (userId: string) => void;
-  logout: () => void;
-  switchRole: (role: UserRole) => void;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<{ error: string | null }>;
+  signup: (email: string, password: string, nombre: string) => Promise<{ error: string | null }>;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
   hasPermission: (permission: string) => boolean;
   canAccess: (module: string) => boolean;
 }
@@ -16,90 +30,140 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Definición de permisos por rol
-const rolePermissions: Record<UserRole, string[]> = {
-  admin: ['*'], // Acceso total
+const rolePermissions: Record<AppRole, string[]> = {
+  admin: ['*'],
   operaciones: [
-    'obras.ver', 'obras.editar',
-    'tareas.ver', 'tareas.editar',
-    'bitacora.ver', 'bitacora.editar',
-    'documentos.ver', 'documentos.editar',
-    'stock.ver',
-    'herramientas.ver', 'herramientas.editar',
-    'flota.ver',
+    'obras.ver', 'obras.editar', 'tareas.ver', 'tareas.editar',
+    'bitacora.ver', 'bitacora.editar', 'documentos.ver', 'documentos.editar',
+    'stock.ver', 'herramientas.ver', 'herramientas.editar', 'flota.ver',
   ],
   finanzas: [
-    'obras.ver',
-    'cobros.ver', 'cobros.editar',
-    'cuotas.ver', 'cuotas.editar',
-    'cuentas.ver', 'cuentas.editar',
-    'reportes.ver',
-    'presupuestos.ver', 'presupuestos.editar',
-    'proveedores.ver',
+    'obras.ver', 'cobros.ver', 'cobros.editar', 'cuotas.ver', 'cuotas.editar',
+    'cuentas.ver', 'cuentas.editar', 'reportes.ver',
+    'presupuestos.ver', 'presupuestos.editar', 'proveedores.ver',
   ],
   ventas: [
-    'obras.ver',
-    'unidades.ver', 'unidades.editar',
-    'compradores.ver', 'compradores.editar',
-    'clientes.ver', 'clientes.editar',
+    'obras.ver', 'unidades.ver', 'unidades.editar',
+    'compradores.ver', 'compradores.editar', 'clientes.ver', 'clientes.editar',
     'reservas.ver', 'reservas.editar',
   ],
   cliente: [
-    'portal.ver',
-    'mis_unidades.ver',
-    'mis_pagos.ver',
-    'mis_documentos.ver',
-    'avance_obra.ver',
+    'portal.ver', 'mis_unidades.ver', 'mis_pagos.ver', 'mis_documentos.ver', 'avance_obra.ver',
   ],
 };
 
-// Definición de acceso a módulos por rol
-const moduleAccess: Record<UserRole, string[]> = {
+const moduleAccess: Record<AppRole, string[]> = {
   admin: ['*'],
-  operaciones: [
-    'dashboard', 'obras', 'tareas', 'bitacora', 'documentos',
-    'stock', 'herramientas', 'flota', 'calendario', 'notas', 'ia',
-  ],
-  finanzas: [
-    'dashboard', 'obras', 'presupuestos', 'clientes', 'proveedores',
-    'cobros', 'reportes', 'calendario', 'notas', 'ia',
-  ],
-  ventas: [
-    'dashboard', 'obras', 'unidades', 'clientes', 'reservas',
-    'calendario', 'notas', 'ia',
-  ],
+  operaciones: ['dashboard', 'obras', 'tareas', 'bitacora', 'documentos', 'stock', 'herramientas', 'flota', 'calendario', 'notas', 'ia'],
+  finanzas: ['dashboard', 'obras', 'presupuestos', 'clientes', 'proveedores', 'cobros', 'reportes', 'calendario', 'notas', 'ia'],
+  ventas: ['dashboard', 'obras', 'unidades', 'clientes', 'reservas', 'calendario', 'notas', 'ia'],
   cliente: ['portal'],
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    // Por defecto, iniciar como admin para demo
-    return mockUsers.find(u => u.rol === 'admin') || null;
-  });
+  const [user, setUser] = useState<SupaUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<AppRole>('cliente');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const role = user?.rol || 'cliente';
+  const fetchProfileAndRole = useCallback(async (userId: string) => {
+    try {
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-  const login = useCallback((userId: string) => {
-    const foundUser = mockUsers.find(u => u.id === userId);
-    if (foundUser) {
-      setUser(foundUser);
+      if (profileData) {
+        setProfile(profileData as UserProfile);
+      }
+
+      // Fetch role using the security definer function
+      const { data: roleData } = await supabase
+        .rpc('get_user_role', { _user_id: userId });
+
+      if (roleData) {
+        setRole(roleData as AppRole);
+      } else {
+        setRole('operaciones'); // default
+      }
+    } catch (e) {
+      console.error('Error fetching profile/role:', e);
     }
   }, []);
 
-  const logout = useCallback(() => {
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
+          // Use setTimeout to avoid potential deadlock with Supabase client
+          setTimeout(() => fetchProfileAndRole(newSession.user.id), 0);
+        } else {
+          setProfile(null);
+          setRole('cliente');
+        }
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      if (existingSession?.user) {
+        fetchProfileAndRole(existingSession.user.id);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfileAndRole]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+    return { error: null };
+  }, []);
+
+  const signup = useCallback(async (email: string, password: string, nombre: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { nombre },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    if (error) return { error: error.message };
+    return { error: null };
+  }, []);
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setSession(null);
+    setProfile(null);
+    setRole('cliente');
   }, []);
 
-  const switchRole = useCallback((newRole: UserRole) => {
-    const userWithRole = mockUsers.find(u => u.rol === newRole);
-    if (userWithRole) {
-      setUser(userWithRole);
-    }
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) return { error: error.message };
+    return { error: null };
   }, []);
 
   const hasPermission = useCallback((permission: string): boolean => {
-    const permissions = rolePermissions[role];
-    if (permissions.includes('*')) return true;
-    return permissions.includes(permission);
+    const perms = rolePermissions[role];
+    if (perms.includes('*')) return true;
+    return perms.includes(permission);
   }, [role]);
 
   const canAccess = useCallback((module: string): boolean => {
@@ -112,11 +176,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        profile,
         role,
-        isAuthenticated: !!user,
+        session,
+        isAuthenticated: !!session,
+        isLoading,
         login,
+        signup,
         logout,
-        switchRole,
+        resetPassword,
         hasPermission,
         canAccess,
       }}

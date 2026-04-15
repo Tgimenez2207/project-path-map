@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import type { AppRole } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,7 @@ const COLORS = ['hsl(24, 100%, 50%)', 'hsl(142, 71%, 45%)', 'hsl(48, 96%, 53%)',
 const PIE_COLORS = ['hsl(142, 71%, 45%)', 'hsl(48, 96%, 53%)', 'hsl(24, 100%, 50%)', 'hsl(220, 10%, 70%)'];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { data: obras = [], isLoading: obrasLoading } = useObras();
   const { data: unidades = [] } = useUnidades();
   const { data: clientes = [] } = useClientes();
@@ -116,7 +117,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Bienvenido, {user?.nombre?.split(' ')[0]}</h1>
+          <h1 className="text-2xl font-semibold">Bienvenido, {profile?.nombre?.split(' ')[0] || 'Usuario'}</h1>
           <p className="text-muted-foreground">Panel de control del Sistema de Gestión de Obras</p>
         </div>
         <div className="flex items-center gap-3">
