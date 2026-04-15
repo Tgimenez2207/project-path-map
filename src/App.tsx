@@ -26,6 +26,7 @@ import Calendario from "@/pages/Calendario";
 import Notas from "@/pages/Notas";
 import Usuarios from "@/pages/Usuarios";
 import IAPanel from "@/pages/IAPanel";
+import SimuladorRinde from "@/pages/SimuladorRinde";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";
@@ -74,6 +75,7 @@ const App = () => (
               <Route path="notas" element={<Notas />} />
               <Route path="usuarios" element={<Usuarios />} />
               <Route path="ia" element={<IAPanel />} />
+              <Route path="simulador" element={<SimuladorRinde />} />
             </Route>
 
             {/* Portal del Cliente Routes */}
