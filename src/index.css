@@ -204,3 +204,10 @@
     background: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(24 100% 60%) 100%);
   }
 }
+
+@media print {
+  [data-sidebar], .formulario-col, header, nav, .print\\:hidden { display: none !important; }
+  .resultados-col { width: 100% !important; max-width: 100% !important; }
+  .print\\:block { display: block !important; }
+  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}

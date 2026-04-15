@@ -27,6 +27,7 @@ import {
   HardHat,
   ExternalLink,
   Sparkles,
+  Calculator,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ const menuItems = [
   { title: 'Herramientas', url: '/herramientas', icon: Wrench, module: 'herramientas' },
   { title: 'Flota', url: '/flota', icon: Car, module: 'flota' },
   { title: 'IA Copilot', url: '/ia', icon: Sparkles, module: 'ia' },
+  { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
 ];
 
 const extraItems = [
