@@ -13,6 +13,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import Obras from "@/pages/Obras";
 import ObraDetalle from "@/pages/ObraDetalle";
+import GanttObra from "@/pages/GanttObra";
 import Unidades from "@/pages/Unidades";
 import UnidadDetalle from "@/pages/UnidadDetalle";
 import AvanceObra from "@/pages/AvanceObra";
@@ -62,6 +63,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="obras" element={<Obras />} />
               <Route path="obras/:obraId" element={<ObraDetalle />} />
+              <Route path="obras/:obraId/cronograma" element={<GanttObra />} />
               <Route path="obras/:obraId/unidades" element={<Unidades />} />
               <Route path="obras/:obraId/unidades/:unidadId" element={<UnidadDetalle />} />
               <Route path="obras/:obraId/avance" element={<AvanceObra />} />
