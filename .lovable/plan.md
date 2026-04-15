@@ -1,55 +1,42 @@
 
 
-# Plan: Consolidar IA en un Hub Central
+# Plan: Módulo Gantt de Obra
 
-## Problema actual
-La IA está dispersa en 5 lugares distintos sin conexión clara:
-1. **Sidebar "IA Copilot"** → `/ia` (IAPanel.tsx) — solo muestra alertas por obra, redundante con el tab IA de ObraDetalle
-2. **Tab "IA" en ObraDetalle** → IACopilotTab.tsx — chat + alertas por obra
-3. **MarketingDialog** en ObraDetalle — genera contenido marketing
-4. **Proveedores** — análisis, comparación y chat IA inline
-5. **Simulador de Rinde** — análisis IA del rinde
+## Resumen
+Crear un diagrama de Gantt interactivo para visualizar el cronograma de cada obra, con barras posicionadas por tiempo, collapse/expand de etapas, edición inline, y análisis IA del cronograma. Se integra como nueva tab en ObraDetalle y como página standalone.
 
-El IAPanel de la sidebar es el más débil: solo replica alertas que ya están en cada obra. No agrega valor.
+## Archivos a crear
 
-## Solución
-Transformar `/ia` (IAPanel.tsx) en un **Hub de IA centralizado** que sirva como punto de entrada único, con accesos directos a todas las funcionalidades IA del sistema.
+### 1. `src/types/gantt.ts`
+Tipos `TipoNodo`, `EstadoNodo`, `NodoGantt` según el spec.
 
-## Cambios a realizar
+### 2. `src/data/mockGantt.ts`
+~20 nodos con la estructura jerárica especificada (5 etapas, subetapas y tareas), 240 días totales, TODAY_OFFSET=135.
 
-### 1. Reescribir `src/pages/IAPanel.tsx` como Hub de IA
+### 3. `src/pages/GanttObra.tsx`
+Página completa del Gantt con:
+- **Header**: botón volver, nombre obra, botones "Análisis IA", "Exportar" (print), "Nueva tarea"
+- **Toolbar**: controles de zoom (Meses/Semanas/Días), botón "Hoy" (scroll programático), leyenda de colores
+- **Gantt chart**: div con overflow-x scroll, columna izquierda sticky (260px, z-10, bg sólido) con nombres indentados por tipo + collapse/expand, área derecha con barras coloreadas posicionadas por `left` y `width` calculados con `dayPx`, overlay de avance, línea roja "hoy"
+- **Sheet de detalle** (shadcn Sheet derecha): campos editables para inicio, duración, avance (Slider), responsable, dependencia (Select), estado (Select), notas, botón eliminar
+- **Dialog nuevo nodo**: formulario con nombre, tipo, padre, inicio, duración, responsable, dependencia, crítica, notas
+- **Card de análisis IA**: debajo del Gantt, usa edge function `ai-copilot` (ya existente, ya soporta contexto genérico) para analizar riesgos del cronograma
+- **Mobile**: versión simplificada tipo lista con progress bars
+- Scroll automático al día "hoy" al montar (`useRef` + `scrollTo`)
 
-Nueva estructura con 3 secciones:
+### 4. Modificar `src/pages/ObraDetalle.tsx`
+- Agregar tab "Cronograma" con ícono `GanttChart` entre "Etapas y Tareas" y "Bitácora"
+- Agregar botón "Ver Gantt completo" en Quick Actions que navega a `/obras/:obraId/cronograma`
+- El contenido de la tab muestra una versión embebida simplificada o un link al Gantt completo
 
-**a) Chat IA general (protagonista)**
-Un copilot conversacional que no está atado a una obra específica. Usa la edge function `ai-copilot` existente pero con un system prompt genérico sobre gestión de obras. El usuario puede preguntar sobre cualquier tema del negocio. Streaming con el mismo patrón de IACopilotTab.
-
-**b) Accesos directos a funcionalidades IA**
-Grid de cards que linkean a cada feature IA existente:
-- "Analizar obra" → navega a `/obras/:id` tab IA
-- "Comparar proveedores" → navega a `/proveedores`
-- "Simular rinde" → navega a `/simulador`
-- "Generar contenido" → navega a `/obras/:id` (marketing)
-
-Cada card muestra icono, título, descripción corta de qué hace.
-
-**c) Resumen de alertas cross-obra**
-Mantener la funcionalidad actual de IAPanel (analizar todas las obras) pero como sección colapsable secundaria, no como feature principal.
-
-### 2. Renombrar en sidebar
-Cambiar "IA Copilot" → "Asistente IA" en `AppSidebar.tsx` para diferenciarlo del copilot contextual de cada obra.
-
-### 3. Crear edge function `ai-assistant` (o reutilizar `ai-copilot`)
-Adaptar `ai-copilot` para que funcione sin `obraContext` obligatorio (hacerlo opcional). Si no recibe contexto de obra, usa un prompt genérico de experto en construcción. Esto evita crear otra edge function.
-
-## Archivos a modificar
-- `src/pages/IAPanel.tsx` — reescribir completo
-- `src/components/layout/AppSidebar.tsx` — renombrar label
-- `supabase/functions/ai-copilot/index.ts` — hacer `obraContext` opcional
+### 5. Modificar `src/App.tsx`
+- Agregar import y ruta: `<Route path="obras/:obraId/cronograma" element={<GanttObra />} />`
 
 ## Detalles técnicos
-- El chat general reutiliza el patrón de streaming SSE existente en IACopilotTab
-- Los mensajes del chat general se persisten en localStorage con key `ia-assistant-general`
-- No se crean tablas nuevas ni migraciones
-- Las funcionalidades IA en Proveedores, Simulador y ObraDetalle quedan intactas — solo se agrega un hub que las conecta
+
+- **IA**: Reutiliza la edge function `ai-copilot` existente (ya acepta contexto genérico). No se crea nueva edge function.
+- **Sin migraciones DB**: Todo el módulo usa estado local con mock data.
+- **Sticky column**: La columna izquierda usa `position: sticky; left: 0; z-index: 10` con `bg-background` para quedar fija durante scroll horizontal.
+- **Barras**: Posición calculada como `left: nodo.inicioOffset * dayPx`, `width: nodo.duracion * dayPx`. Colores: rojo para ruta crítica, azul para etapas, verde para subetapas, naranja para tareas.
+- **Dependencias**: Se renderizan visualmente como flechas simples (líneas SVG o borders) entre barras conectadas.
 
