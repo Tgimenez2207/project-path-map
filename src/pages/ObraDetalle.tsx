@@ -17,11 +17,14 @@ import {
   Settings,
   Package,
   Plus,
+  Sparkles,
 } from 'lucide-react';
 import { mockObras, mockEtapas, mockTareas, mockBitacora } from '@/data/mockObras';
 import { mockUnidades } from '@/data/mockUnidades';
 import { mockContratistas } from '@/data/mockClientes';
 import { EstadoObra } from '@/types';
+import IACopilotTab from '@/components/obra/IACopilotTab';
+import MarketingDialog from '@/components/obra/MarketingDialog';
 
 const estadoLabels: Record<EstadoObra, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   planificacion: { label: 'Planificación', variant: 'secondary' },
@@ -35,6 +38,7 @@ export default function ObraDetalle() {
   const { obraId } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('etapas');
+  const [showMarketingModal, setShowMarketingModal] = useState(false);
 
   const obra = mockObras.find((o) => o.id === obraId);
   const etapas = mockEtapas.filter((e) => e.obraId === obraId);
@@ -148,6 +152,10 @@ export default function ObraDetalle() {
           <Plus className="h-4 w-4 mr-2" />
           Nueva Entrada Bitácora
         </Button>
+        <Button variant="outline" onClick={() => setShowMarketingModal(true)}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          Generar Contenido
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -165,6 +173,10 @@ export default function ObraDetalle() {
             <DollarSign className="h-4 w-4" />
             Finanzas
           </TabsTrigger>
+          <TabsTrigger value="ia" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            IA Copilot
+          </TabsTrigger>
           <TabsTrigger value="documentos" className="gap-2">
             <FileText className="h-4 w-4" />
             Documentos
@@ -179,8 +191,6 @@ export default function ObraDetalle() {
           <div className="space-y-4">
             {etapas.map((etapa) => {
               const etapaTareas = tareas.filter((t) => t.etapaId === etapa.id);
-              const completadas = etapaTareas.filter((t) => t.estado === 'completada').length;
-              
               return (
                 <Card key={etapa.id}>
                   <CardHeader className="pb-3">
@@ -188,18 +198,10 @@ export default function ObraDetalle() {
                       <CardTitle className="text-base">{etapa.nombre}</CardTitle>
                       <Badge
                         variant={
-                          etapa.estado === 'completada'
-                            ? 'default'
-                            : etapa.estado === 'en_curso'
-                            ? 'secondary'
-                            : 'outline'
+                          etapa.estado === 'completada' ? 'default' : etapa.estado === 'en_curso' ? 'secondary' : 'outline'
                         }
                       >
-                        {etapa.estado === 'completada'
-                          ? 'Completada'
-                          : etapa.estado === 'en_curso'
-                          ? 'En curso'
-                          : 'Pendiente'}
+                        {etapa.estado === 'completada' ? 'Completada' : etapa.estado === 'en_curso' ? 'En curso' : 'Pendiente'}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -207,33 +209,18 @@ export default function ObraDetalle() {
                     <div className="space-y-2">
                       {etapaTareas.length > 0 ? (
                         etapaTareas.map((tarea) => (
-                          <div
-                            key={tarea.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                          >
+                          <div key={tarea.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                             <div className="flex items-center gap-3">
-                              <div
-                                className={`h-2 w-2 rounded-full ${
-                                  tarea.estado === 'completada'
-                                    ? 'bg-success'
-                                    : tarea.estado === 'en_curso'
-                                    ? 'bg-warning'
-                                    : 'bg-muted-foreground'
-                                }`}
-                              />
+                              <div className={`h-2 w-2 rounded-full ${
+                                tarea.estado === 'completada' ? 'bg-success' : tarea.estado === 'en_curso' ? 'bg-warning' : 'bg-muted-foreground'
+                              }`} />
                               <span className="text-sm">{tarea.titulo}</span>
                             </div>
-                            {tarea.asignadoA && (
-                              <span className="text-xs text-muted-foreground">
-                                {tarea.asignadoA}
-                              </span>
-                            )}
+                            {tarea.asignadoA && <span className="text-xs text-muted-foreground">{tarea.asignadoA}</span>}
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-muted-foreground">
-                          No hay tareas en esta etapa
-                        </p>
+                        <p className="text-sm text-muted-foreground">No hay tareas en esta etapa</p>
                       )}
                     </div>
                   </CardContent>
@@ -256,16 +243,10 @@ export default function ObraDetalle() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium">{entrada.titulo}</h4>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(entrada.fecha).toLocaleDateString('es-AR')}
-                          </span>
+                          <span className="text-sm text-muted-foreground">{new Date(entrada.fecha).toLocaleDateString('es-AR')}</span>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {entrada.descripcion}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Por {entrada.autor}
-                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">{entrada.descripcion}</p>
+                        <p className="text-xs text-muted-foreground mt-2">Por {entrada.autor}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -275,9 +256,7 @@ export default function ObraDetalle() {
               <div className="empty-state">
                 <ScrollText className="empty-state-icon" />
                 <h3 className="empty-state-title">Sin entradas</h3>
-                <p className="empty-state-description">
-                  No hay entradas en la bitácora todavía.
-                </p>
+                <p className="empty-state-description">No hay entradas en la bitácora todavía.</p>
               </div>
             )}
           </div>
@@ -289,9 +268,7 @@ export default function ObraDetalle() {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="p-4 rounded-lg bg-muted/50">
                   <p className="text-sm text-muted-foreground">Presupuesto Total</p>
-                  <p className="text-2xl font-bold">
-                    {obra.moneda} {obra.presupuestoTotal?.toLocaleString() || '0'}
-                  </p>
+                  <p className="text-2xl font-bold">{obra.moneda} {obra.presupuestoTotal?.toLocaleString() || '0'}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-success/10">
                   <p className="text-sm text-muted-foreground">Ingresos</p>
@@ -306,13 +283,15 @@ export default function ObraDetalle() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="ia" className="mt-6">
+          <IACopilotTab obra={obra} etapas={etapas} tareas={tareas} bitacora={bitacora} />
+        </TabsContent>
+
         <TabsContent value="documentos" className="mt-6">
           <div className="empty-state">
             <FileText className="empty-state-icon" />
             <h3 className="empty-state-title">Sin documentos</h3>
-            <p className="empty-state-description">
-              No hay documentos cargados para esta obra.
-            </p>
+            <p className="empty-state-description">No hay documentos cargados para esta obra.</p>
             <Button className="mt-4">
               <Plus className="h-4 w-4 mr-2" />
               Subir documento
@@ -340,6 +319,15 @@ export default function ObraDetalle() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Marketing Dialog */}
+      <MarketingDialog
+        open={showMarketingModal}
+        onOpenChange={setShowMarketingModal}
+        obra={obra}
+        unidadesVendidas={unidadesVendidas}
+        totalUnidades={unidades.length}
+      />
     </div>
   );
 }

@@ -26,6 +26,7 @@ import {
   Settings,
   HardHat,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ const menuItems = [
   { title: 'Stock', url: '/stock', icon: Package, module: 'stock' },
   { title: 'Herramientas', url: '/herramientas', icon: Wrench, module: 'herramientas' },
   { title: 'Flota', url: '/flota', icon: Car, module: 'flota' },
+  { title: 'IA Copilot', url: '/ia', icon: Sparkles, module: 'ia' },
 ];
 
 const extraItems = [
