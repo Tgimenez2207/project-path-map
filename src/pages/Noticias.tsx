@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import type { Noticia, CategoriaNoticia, BusquedaConfig } from '@/types/noticias';
@@ -51,7 +52,7 @@ export default function Noticias() {
   const [noticiaDetalle, setNoticiaDetalle] = useState<Noticia | null>(null);
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
   const [busquedaManual, setBusquedaManual] = useState('');
-
+  const [urlConfirm, setUrlConfirm] = useState<{ url: string; fuente: string } | null>(null);
   useEffect(() => {
     fetchNoticias();
   }, []);
@@ -311,7 +312,7 @@ export default function Noticias() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={e => { e.stopPropagation(); window.open(noticia.url, '_blank'); }}
+                        onClick={e => { e.stopPropagation(); setUrlConfirm({ url: noticia.url!, fuente: noticia.fuente }); }}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -378,7 +379,7 @@ export default function Noticias() {
                   <Button
                     variant="outline"
                     className="w-full gap-2"
-                    onClick={() => window.open(noticiaDetalle.url, '_blank')}
+                    onClick={() => setUrlConfirm({ url: noticiaDetalle.url!, fuente: noticiaDetalle.fuente })}
                   >
                     <ExternalLink className="h-4 w-4" />
                     Leer nota completa
@@ -400,6 +401,36 @@ export default function Noticias() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Confirm external link dialog */}
+      <Dialog open={!!urlConfirm} onOpenChange={open => !open && setUrlConfirm(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Abrir nota en otra pestaña</DialogTitle>
+            <DialogDescription>
+              Vas a ser redirigido al portal de <span className="font-semibold text-foreground">{urlConfirm?.fuente}</span> para leer la nota completa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-muted rounded-lg p-3 text-xs text-muted-foreground break-all">
+            {urlConfirm?.url}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setUrlConfirm(null)}>
+              Cancelar
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={() => {
+                window.open(urlConfirm?.url, '_blank');
+                setUrlConfirm(null);
+              }}
+            >
+              <ExternalLink className="h-4 w-4" />
+              Abrir en nueva pestaña
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
