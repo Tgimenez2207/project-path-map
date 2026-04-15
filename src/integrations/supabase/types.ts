@@ -292,6 +292,53 @@ export type Database = {
           },
         ]
       }
+      eventos: {
+        Row: {
+          color: string
+          created_at: string
+          descripcion: string | null
+          fecha_fin: string | null
+          fecha_inicio: string
+          id: string
+          obra_id: string | null
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          descripcion?: string | null
+          fecha_fin?: string | null
+          fecha_inicio: string
+          id?: string
+          obra_id?: string | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          descripcion?: string | null
+          fecha_fin?: string | null
+          fecha_inicio?: string
+          id?: string
+          obra_id?: string | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       herramientas: {
         Row: {
           asignado_a: string | null
@@ -479,6 +526,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notas: {
+        Row: {
+          color: string
+          contenido: string | null
+          created_at: string
+          fijada: boolean
+          id: string
+          prioridad: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          contenido?: string | null
+          created_at?: string
+          fijada?: boolean
+          id?: string
+          prioridad?: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          contenido?: string | null
+          created_at?: string
+          fijada?: boolean
+          id?: string
+          prioridad?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       obras: {
         Row: {
