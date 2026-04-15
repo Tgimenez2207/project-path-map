@@ -26,7 +26,9 @@ const estadoVehiculo: Record<string, { label: string; variant: 'default' | 'seco
 const tiposVehiculo = ['camioneta', 'camion', 'auto', 'utilitario'] as const;
 const estadosVehiculo = ['disponible', 'en_uso', 'mantenimiento'] as const;
 
-const emptyVehiculo = { patente: '', marca: '', modelo: '', anio: new Date().getFullYear(), tipo: 'camioneta' as const, estado: 'disponible' as const, kilometraje: 0, proximo_vencimiento: '', tipo_vencimiento: '' };
+type TipoVehiculo = typeof tiposVehiculo[number];
+type EstadoVehiculo = typeof estadosVehiculo[number];
+const emptyVehiculo: { patente: string; marca: string; modelo: string; anio: number; tipo: TipoVehiculo; estado: EstadoVehiculo; kilometraje: number; proximo_vencimiento: string; tipo_vencimiento: string } = { patente: '', marca: '', modelo: '', anio: new Date().getFullYear(), tipo: 'camioneta', estado: 'disponible', kilometraje: 0, proximo_vencimiento: '', tipo_vencimiento: '' };
 const emptyMant = { fecha: '', tipo: '', kilometraje: 0, costo: 0, descripcion: '', proximo_mantenimiento: '', vehiculo_id: '' };
 
 export default function Flota() {
