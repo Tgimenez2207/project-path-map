@@ -57,15 +57,15 @@ const moduleAccess: Record<UserRole, string[]> = {
   admin: ['*'],
   operaciones: [
     'dashboard', 'obras', 'tareas', 'bitacora', 'documentos',
-    'stock', 'herramientas', 'flota', 'calendario', 'notas',
+    'stock', 'herramientas', 'flota', 'calendario', 'notas', 'ia',
   ],
   finanzas: [
     'dashboard', 'obras', 'presupuestos', 'clientes', 'proveedores',
-    'cobros', 'reportes', 'calendario', 'notas',
+    'cobros', 'reportes', 'calendario', 'notas', 'ia',
   ],
   ventas: [
     'dashboard', 'obras', 'unidades', 'clientes', 'reservas',
-    'calendario', 'notas',
+    'calendario', 'notas', 'ia',
   ],
   cliente: ['portal'],
 };
