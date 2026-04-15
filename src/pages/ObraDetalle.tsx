@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building2, MapPin, Calendar, DollarSign, Users,
-  FileText, ListTodo, ScrollText, Settings, Package, Plus, Sparkles,
+  FileText, ListTodo, ScrollText, Settings, Package, Plus, Sparkles, GanttChart,
 } from 'lucide-react';
 import { useObra, useEtapas, useTareas, useBitacora, useUnidades } from '@/hooks/useSupabaseData';
 import { useProveedores } from '@/hooks/useSupabaseData';
@@ -124,9 +124,12 @@ export default function ObraDetalle() {
       </div>
 
       {/* Quick Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <Link to={`/obras/${obraId}/unidades`}>
           <Button><Package className="h-4 w-4 mr-2" />Ver Unidades</Button>
+        </Link>
+        <Link to={`/obras/${obraId}/cronograma`}>
+          <Button variant="outline"><GanttChart className="h-4 w-4 mr-2" />Ver Gantt completo</Button>
         </Link>
         <Button variant="outline"><Plus className="h-4 w-4 mr-2" />Nueva Entrada Bitácora</Button>
         <Button variant="outline" onClick={() => setShowMarketingModal(true)}>
@@ -138,6 +141,7 @@ export default function ObraDetalle() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="etapas" className="gap-2"><ListTodo className="h-4 w-4" />Etapas y Tareas</TabsTrigger>
+          <TabsTrigger value="cronograma" className="gap-2"><GanttChart className="h-4 w-4" />Cronograma</TabsTrigger>
           <TabsTrigger value="bitacora" className="gap-2"><ScrollText className="h-4 w-4" />Bitácora</TabsTrigger>
           <TabsTrigger value="finanzas" className="gap-2"><DollarSign className="h-4 w-4" />Finanzas</TabsTrigger>
           <TabsTrigger value="ia" className="gap-2"><Sparkles className="h-4 w-4" />IA Copilot</TabsTrigger>
@@ -175,6 +179,17 @@ export default function ObraDetalle() {
                 </Card>
               );
             })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cronograma" className="mt-6">
+          <div className="text-center py-12">
+            <GanttChart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Diagrama de Gantt</h3>
+            <p className="text-sm text-muted-foreground mb-4">Visualizá el cronograma completo de la obra con todas las etapas, subetapas y tareas.</p>
+            <Link to={`/obras/${obraId}/cronograma`}>
+              <Button><GanttChart className="h-4 w-4 mr-2" />Abrir Gantt completo</Button>
+            </Link>
           </div>
         </TabsContent>
 
