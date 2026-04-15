@@ -72,14 +72,14 @@ export default function Noticias() {
       if (!jsonMatch) throw new Error('No se pudo parsear la respuesta');
 
       const parsed = JSON.parse(jsonMatch[0]);
-      const guardadasIds: string[] = JSON.parse(localStorage.getItem('noticias-guardadas') || '[]');
+      const guardadasTitulos: string[] = JSON.parse(localStorage.getItem('noticias-guardadas-titulos') || '[]');
 
       const noticiasConId: Noticia[] = parsed.noticias.map((n: any) => {
         const id = crypto.randomUUID();
         return {
           ...n,
           id,
-          guardada: false,
+          guardada: guardadasTitulos.includes(n.titulo),
           leida: false,
         };
       });
@@ -101,8 +101,8 @@ export default function Noticias() {
   const toggleGuardada = (id: string) => {
     setNoticias(prev => {
       const updated = prev.map(n => n.id === id ? { ...n, guardada: !n.guardada } : n);
-      const guardadas = updated.filter(n => n.guardada).map(n => n.id);
-      localStorage.setItem('noticias-guardadas', JSON.stringify(guardadas));
+      const guardadasTitulos = updated.filter(n => n.guardada).map(n => n.titulo);
+      localStorage.setItem('noticias-guardadas-titulos', JSON.stringify(guardadasTitulos));
       return updated;
     });
     if (noticiaDetalle?.id === id) {
