@@ -41,7 +41,7 @@ const menuItems = [
   { title: 'Stock', url: '/stock', icon: Package, module: 'stock' },
   { title: 'Herramientas', url: '/herramientas', icon: Wrench, module: 'herramientas' },
   { title: 'Flota', url: '/flota', icon: Car, module: 'flota' },
-  { title: 'IA Copilot', url: '/ia', icon: Sparkles, module: 'ia' },
+  { title: 'Asistente IA', url: '/ia', icon: Sparkles, module: 'ia' },
   { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
 ];
 
