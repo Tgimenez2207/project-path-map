@@ -563,6 +563,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notificaciones: {
+        Row: {
+          created_at: string
+          id: string
+          leida: boolean
+          mensaje: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          leida?: boolean
+          mensaje: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          leida?: boolean
+          mensaje?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       obras: {
         Row: {
           ciudad: string
