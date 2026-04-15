@@ -1,47 +1,49 @@
 
 
-# Plan: Módulo Simulador de Rinde Inmobiliario
+# Plan: Módulo de Proveedores con IA
 
 ## Resumen
-Crear una nueva página "Simulador de Rinde" que permite calcular la rentabilidad de proyectos inmobiliarios con inputs interactivos, resultados en tiempo real, análisis con IA (via Lovable AI Gateway) y exportación PDF.
+Reemplazar completamente `src/pages/Proveedores.tsx` con un módulo avanzado que incluye evaluaciones, cotizaciones, análisis IA, y comparación entre proveedores. Se usa estado local con mock data (sin nuevas tablas en DB). Se crea una edge function para el análisis IA.
 
-## Cambios a realizar
+## Archivos a crear/modificar
 
-### 1. Crear edge function para análisis IA
-**Archivo:** `supabase/functions/ai-rinde/index.ts`
+### 1. Crear `src/types/proveedores.ts`
+Tipos `Proveedor`, `Evaluacion`, `Cotizacion`, `RubroProveedor`, `EstadoProveedor` exactamente como se especifica.
 
-El prompt del usuario menciona Anthropic API directamente, pero el proyecto ya usa Lovable AI Gateway (ver `ai-copilot`). Se reutilizará ese patrón con `google/gemini-3-flash-preview` -- no requiere API key adicional.
+### 2. Crear `src/data/mockProveedores.ts`
+8-10 proveedores con rubros variados, 2-3 evaluaciones y 1-2 cotizaciones cada uno. Datos realistas del mercado argentino.
 
-La función recibirá los inputs y resultados del simulador, y devolverá el análisis estructurado usando el mismo system prompt de experto inmobiliario argentino que se describe en el spec.
+### 3. Crear `supabase/functions/ai-proveedores/index.ts`
+Edge function que usa Lovable AI Gateway (no Anthropic directo). Soporta dos modos:
+- `analizar`: análisis individual de un proveedor
+- `comparar`: recomendación entre proveedores seleccionados
 
-### 2. Crear la página del simulador
-**Archivo:** `src/pages/SimuladorRinde.tsx`
+Reutiliza el patrón de `ai-rinde` con CORS headers y manejo de 429/402.
 
+### 4. Reemplazar `src/pages/Proveedores.tsx`
 Componente completo con:
-- **Estado:** `inputs` (todos los campos del formulario), `escenario` (optimista/base/conservador), `isLoadingIA`, `analisisIA`
-- **Cálculos en `useMemo`:** costoTotal, utilidadNeta, margenSobreCostos, ROI anualizado, punto de equilibrio, etc. -- exactamente como se especifica
-- **Layout dos columnas** (60/40 en desktop, stacked en mobile):
-  - Izquierda: 3 Cards con formulario (Datos del proyecto, Estructura de costos con sliders+inputs para %, Precio de venta)
-  - Derecha: Panel sticky con KPIs (grid 2x2 principal + secundario), tabla desglose, barras de composición de costos
-- **Selector de escenario:** ToggleGroup con 3 opciones prominentes
-- **Análisis IA:** Llama a la edge function `ai-rinde` y muestra resultado en Card con Sparkles icon
-- **Exportar PDF:** `window.print()` con estilos `@media print` para ocultar sidebar y formulario
-- Formateo con `.toLocaleString('es-AR')`, inputs con `min={0}`
+- **Estado local** con `useState` para proveedores (mock), filtros, selección, detalle
+- **Header** con contadores y botón "Comparar" (visible cuando hay 2+ seleccionados)
+- **Barra de filtros**: búsqueda + select rubro + select estado + select ordenar
+- **4 KPIs**: activos, rating promedio, cotizaciones del mes, en evaluación
+- **Grid de cards** (2 cols desktop, 1 mobile) con checkbox de selección, rating con estrellas Unicode, badges por rubro con colores, botones "Ver detalle" y "Analizar con IA"
+- **Sheet de detalle** (shadcn Sheet desde la derecha) con 4 tabs:
+  - Resumen (contacto, notas, resumen IA)
+  - Evaluaciones (lista + formulario nueva evaluación con sliders 1-5)
+  - Cotizaciones (tabla + formulario nueva cotización)
+  - IA (chat contextual del proveedor via edge function)
+- **Dialog de comparación** (max-w-4xl) con tabla comparativa, celdas ganadoras en verde, botón "Que la IA recomiende"
+- **Dialog nuevo proveedor** con todos los campos del spec
+- **Función `calcularRating`** como se especifica
+- Formateo con `toLocaleString('es-AR')`, inputs `min={0}`
 
-### 3. Agregar ruta y navegación
-**Archivo:** `src/App.tsx`
-- Import `SimuladorRinde` y agregar `<Route path="simulador" element={<SimuladorRinde />} />`
-
-**Archivo:** `src/components/layout/AppSidebar.tsx`
-- Agregar item `{ title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' }` en `menuItems`
-
-### 4. Estilos de impresión
-**Archivo:** `src/index.css`
-- Agregar bloque `@media print` para ocultar sidebar y columna de formulario, expandir resultados al 100%
+### 5. Agregar estilos mobile
+FAB fijo en mobile cuando hay proveedores seleccionados para el botón "Comparar".
 
 ## Detalles técnicos
 
-- **IA:** Edge function `ai-rinde` usa Lovable AI Gateway (no Anthropic directamente) con `LOVABLE_API_KEY` ya configurado
-- **Sin base de datos:** Este módulo es puramente de cálculo client-side, no requiere tablas ni migraciones
-- **Acceso:** Se filtra por `canAccess('simulador')` -- disponible para todos los roles autenticados
+- **IA**: Edge function `ai-proveedores` usa `LOVABLE_API_KEY` + Lovable AI Gateway con `google/gemini-3-flash-preview`
+- **Sin migraciones DB**: Todo el módulo usa estado local con mock data (el spec no pide persistencia en Supabase para las nuevas entidades evaluaciones/cotizaciones)
+- **La tabla `proveedores` existente en Supabase no se usa** en esta nueva versión -- el spec pide mock data con estructura diferente
+- **Sidebar**: Ya tiene el item "Proveedores" con ícono `Truck`, se mantiene
 
