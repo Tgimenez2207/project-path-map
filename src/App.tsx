@@ -5,8 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PortalProvider } from "@/contexts/PortalContext";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { PortalLayout } from "@/components/layout/PortalLayout";
+import Auth from "@/pages/Auth";
+import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import Obras from "@/pages/Obras";
 import ObraDetalle from "@/pages/ObraDetalle";
@@ -33,7 +36,6 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Wrapper para las rutas del portal con contexto compartido
 function PortalWrapper() {
   return (
     <PortalProvider>
@@ -50,8 +52,12 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* Admin/Internal Routes */}
-            <Route path="/" element={<AppLayout />}>
+            {/* Public auth routes */}
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Protected Admin/Internal Routes */}
+            <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="obras" element={<Obras />} />
               <Route path="obras/:obraId" element={<ObraDetalle />} />
@@ -70,11 +76,9 @@ const App = () => (
               <Route path="ia" element={<IAPanel />} />
             </Route>
 
-            {/* Portal del Cliente Routes - Con contexto compartido */}
+            {/* Portal del Cliente Routes */}
             <Route path="/portal" element={<PortalWrapper />}>
               <Route path="login" element={<PortalLogin />} />
-
-              {/* Rutas protegidas del portal */}
               <Route element={<PortalLayout />}>
                 <Route index element={<PortalDashboard />} />
                 <Route path="unidades" element={<PortalUnidades />} />
