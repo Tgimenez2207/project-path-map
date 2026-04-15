@@ -211,3 +211,36 @@ export function useCompradores(unidadId?: string) {
     },
   });
 }
+
+export function useCuotas() {
+  return useQuery({
+    queryKey: ['cuotas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('cuotas').select('*, planes_pago(nombre, obra_id, unidad_id)');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useTareasAll() {
+  return useQuery({
+    queryKey: ['tareas_all'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tareas').select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useStockAlerts() {
+  return useQuery({
+    queryKey: ['stock_alerts'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('stock_items').select('*, productos(nombre, codigo, stock_minimo)');
+      if (error) throw error;
+      return (data || []).filter(s => s.productos && s.cantidad < s.productos.stock_minimo);
+    },
+  });
+}
