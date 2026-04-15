@@ -28,6 +28,7 @@ import Notas from "@/pages/Notas";
 import Usuarios from "@/pages/Usuarios";
 import IAPanel from "@/pages/IAPanel";
 import SimuladorRinde from "@/pages/SimuladorRinde";
+import Noticias from "@/pages/Noticias";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="usuarios" element={<Usuarios />} />
               <Route path="ia" element={<IAPanel />} />
               <Route path="simulador" element={<SimuladorRinde />} />
+              <Route path="noticias" element={<Noticias />} />
             </Route>
 
             {/* Portal del Cliente Routes */}
