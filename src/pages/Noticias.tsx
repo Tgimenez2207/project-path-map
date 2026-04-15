@@ -312,7 +312,7 @@ export default function Noticias() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={e => { e.stopPropagation(); window.open(noticia.url, '_blank'); }}
+                        onClick={e => { e.stopPropagation(); setUrlConfirm({ url: noticia.url!, fuente: noticia.fuente }); }}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
