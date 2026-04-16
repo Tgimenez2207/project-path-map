@@ -53,13 +53,9 @@ serve(async (req) => {
     }
 
     const searchData = await searchResponse.json();
-    console.log("Firecrawl raw keys:", Object.keys(searchData));
-    const results = searchData.data || searchData.results || [];
+    console.log("Firecrawl response:", JSON.stringify(searchData).slice(0, 500));
+    const results = Array.isArray(searchData.data) ? searchData.data : [];
     console.log(`Firecrawl returned ${results.length} results`);
-    if (results.length > 0) {
-      console.log("First result keys:", Object.keys(results[0]));
-      console.log("First result title:", results[0].title || results[0].url || "no title");
-    }
 
     if (!results.length) {
       return new Response(JSON.stringify({ proveedores: [] }), {
