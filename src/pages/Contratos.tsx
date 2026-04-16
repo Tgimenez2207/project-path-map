@@ -15,8 +15,9 @@ import { toast } from 'sonner';
 import {
   FileSignature, Plus, Search, Filter, Building2, Calendar,
   Clock, CheckCircle, DollarSign, FileText,
-  Copy, ChevronRight, Users, Milestone,
+  Copy, ChevronRight, Users, Milestone, Download,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import type { TipoContrato, EstadoContrato, PlantillaContrato, HitoContractual, Parte } from '@/types/contratos';
 
@@ -188,6 +189,121 @@ export default function Contratos() {
     const h = c.hitos as HitoContractual[] || [];
     if (h.length === 0) return 0;
     return (h.filter(x => x.cumplido).length / h.length) * 100;
+  };
+
+  const generarPDF = (c: ContratoRow) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentW = pageW - margin * 2;
+    let y = 25;
+
+    const addLine = (text: string, fontSize = 10, bold = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      const lines = doc.splitTextToSize(text, contentW);
+      for (const line of lines) {
+        if (y > 275) { doc.addPage(); y = 20; }
+        doc.text(line, margin, y);
+        y += fontSize * 0.45;
+      }
+      y += 2;
+    };
+
+    const addField = (label: string, value: string) => {
+      if (!value) return;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(label + ':', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, margin + doc.getTextWidth(label + ': '), y);
+      y += 5;
+    };
+
+    // Header
+    addLine('NATO OBRAS SRL', 14, true);
+    y += 2;
+    doc.setDrawColor(200);
+    doc.line(margin, y, pageW - margin, y);
+    y += 8;
+
+    // Title
+    addLine(c.titulo, 16, true);
+    addField('Número', c.numero);
+    addField('Tipo', tipoLabels[c.tipo] || c.tipo);
+    addField('Estado', estadoConfig[c.estado]?.label || c.estado);
+    addField('Versión', String(c.version));
+    y += 4;
+
+    // Parties
+    const parteA = c.parte_a as Parte;
+    const parteB = c.parte_b as Parte;
+    addLine('PARTES', 12, true);
+    doc.line(margin, y, pageW - margin, y); y += 6;
+    addField('Parte A', parteA?.nombre || '—');
+    if (parteA?.cuit) addField('  CUIT', parteA.cuit);
+    if (parteA?.domicilio) addField('  Domicilio', parteA.domicilio);
+    if (parteA?.representante) addField('  Representante', parteA.representante);
+    y += 2;
+    addField('Parte B', parteB?.nombre || '—');
+    if (parteB?.cuit) addField('  CUIT', parteB.cuit);
+    if (parteB?.dni) addField('  DNI', parteB.dni);
+    if (parteB?.domicilio) addField('  Domicilio', parteB.domicilio);
+    y += 4;
+
+    // Commercial
+    addLine('DATOS COMERCIALES', 12, true);
+    doc.line(margin, y, pageW - margin, y); y += 6;
+    addField('Monto total', `${c.moneda} ${Number(c.monto_total).toLocaleString('es-AR')}`);
+    addField('Forma de pago', c.forma_pago || '—');
+    addField('Fecha inicio', new Date(c.fecha_inicio).toLocaleDateString('es-AR'));
+    if (c.fecha_fin) addField('Fecha fin', new Date(c.fecha_fin).toLocaleDateString('es-AR'));
+    if (c.fecha_firma) addField('Fecha firma', new Date(c.fecha_firma).toLocaleDateString('es-AR'));
+    if (c.obra_nombre) addField('Obra', c.obra_nombre);
+    y += 4;
+
+    // Milestones
+    const hitos = c.hitos as HitoContractual[] || [];
+    if (hitos.length > 0) {
+      addLine('HITOS CONTRACTUALES', 12, true);
+      doc.line(margin, y, pageW - margin, y); y += 6;
+      hitos.forEach((h, i) => {
+        const status = h.cumplido ? '✓' : '○';
+        addField(`${status} ${i + 1}. ${h.descripcion}`, h.fechaEstimada ? new Date(h.fechaEstimada).toLocaleDateString('es-AR') : '');
+        if (h.monto) addField('    Monto', `USD ${h.monto.toLocaleString('es-AR')}`);
+      });
+      y += 4;
+    }
+
+    // Contract body
+    if (c.cuerpo) {
+      addLine('TEXTO DEL CONTRATO', 12, true);
+      doc.line(margin, y, pageW - margin, y); y += 6;
+      addLine(c.cuerpo, 10);
+    }
+
+    // Notes
+    if (c.notas) {
+      y += 4;
+      addLine('NOTAS', 12, true);
+      doc.line(margin, y, pageW - margin, y); y += 6;
+      addLine(c.notas, 10);
+    }
+
+    // Footer on all pages
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(150);
+      doc.text(`${c.numero} — Página ${i} de ${totalPages}`, margin, 290);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-AR')}`, pageW - margin - 40, 290);
+      doc.setTextColor(0);
+    }
+
+    doc.save(`${c.numero}.pdf`);
+    toast.success('PDF descargado');
   };
 
   if (loading) {
@@ -372,10 +488,15 @@ export default function Contratos() {
                   <SheetTitle className="text-left text-lg leading-tight">{c.titulo}</SheetTitle>
                 </SheetHeader>
 
-                <div className="flex flex-wrap gap-2">
-                  <Badge className={estadoConfig[c.estado]?.color}>{estadoConfig[c.estado]?.label}</Badge>
-                  <Badge variant="secondary">{tipoLabels[c.tipo]}</Badge>
-                  {c.obra_nombre && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Building2 className="h-3 w-3 mr-1" />{c.obra_nombre}</Badge>}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className={estadoConfig[c.estado]?.color}>{estadoConfig[c.estado]?.label}</Badge>
+                    <Badge variant="secondary">{tipoLabels[c.tipo]}</Badge>
+                    {c.obra_nombre && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Building2 className="h-3 w-3 mr-1" />{c.obra_nombre}</Badge>}
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => generarPDF(c)}>
+                    <Download className="h-3.5 w-3.5" /> PDF
+                  </Button>
                 </div>
 
                 <Tabs defaultValue="general">
