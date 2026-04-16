@@ -1763,33 +1763,68 @@ export type Database = {
       }
       productos: {
         Row: {
+          caracteristicas: Json | null
           categoria: string
           codigo: string
           created_at: string
+          descripcion: string | null
+          es_terminacion: boolean
+          foto_url: string | null
           id: string
+          marca: string | null
+          modelo: string | null
+          moneda: string
           nombre: string
+          precio_referencia: number | null
+          proveedor_id: string | null
           stock_minimo: number
           unidad_medida: string
         }
         Insert: {
+          caracteristicas?: Json | null
           categoria: string
           codigo: string
           created_at?: string
+          descripcion?: string | null
+          es_terminacion?: boolean
+          foto_url?: string | null
           id?: string
+          marca?: string | null
+          modelo?: string | null
+          moneda?: string
           nombre: string
+          precio_referencia?: number | null
+          proveedor_id?: string | null
           stock_minimo?: number
           unidad_medida: string
         }
         Update: {
+          caracteristicas?: Json | null
           categoria?: string
           codigo?: string
           created_at?: string
+          descripcion?: string | null
+          es_terminacion?: boolean
+          foto_url?: string | null
           id?: string
+          marca?: string | null
+          modelo?: string | null
+          moneda?: string
           nombre?: string
+          precio_referencia?: number | null
+          proveedor_id?: string | null
           stock_minimo?: number
           unidad_medida?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "productos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1883,6 +1918,61 @@ export type Database = {
           web?: string | null
         }
         Relationships: []
+      }
+      selecciones_terminacion: {
+        Row: {
+          categoria: string
+          cliente_id: string
+          created_at: string
+          estado: string
+          id: string
+          notas: string | null
+          producto_id: string
+          unidad_id: string
+        }
+        Insert: {
+          categoria?: string
+          cliente_id: string
+          created_at?: string
+          estado?: string
+          id?: string
+          notas?: string | null
+          producto_id: string
+          unidad_id: string
+        }
+        Update: {
+          categoria?: string
+          cliente_id?: string
+          created_at?: string
+          estado?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          unidad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "selecciones_terminacion_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "selecciones_terminacion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "selecciones_terminacion_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_items: {
         Row: {
