@@ -50,8 +50,9 @@ import {
   AlertCircle,
   Clock,
   Calendar,
+  Palette,
 } from 'lucide-react';
-import { useObra, useUnidad, useComplementos, useCompradores, useClientes } from '@/hooks/useSupabaseData';
+import { useObra, useUnidad, useComplementos, useCompradores, useClientes, useSeleccionesTerminacion } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import { EstadoUnidad, EstadoPago, PlanPago, Cuota } from '@/types';
 import { usePlanPago } from '@/hooks/usePlanPago';
@@ -96,6 +97,9 @@ export default function UnidadDetalle() {
   const { data: clientesData } = useClientes();
   const complementos = complementosData || [];
   const compradores = compradoresData || [];
+  const clientes = clientesData || [];
+  const { data: seleccionesData } = useSeleccionesTerminacion(unidadId);
+  const selecciones = seleccionesData || [];
   const clientes = clientesData || [];
 
   const { planPago, cuotas, crearPlan, registrarPago, calcularResumen } = usePlanPago(unidadId || '');
@@ -266,6 +270,10 @@ export default function UnidadDetalle() {
           <TabsTrigger value="documentos" className="gap-2">
             <FileText className="h-4 w-4" />
             Documentos
+          </TabsTrigger>
+          <TabsTrigger value="terminaciones" className="gap-2">
+            <Palette className="h-4 w-4" />
+            Terminaciones
           </TabsTrigger>
         </TabsList>
 
@@ -862,6 +870,74 @@ export default function UnidadDetalle() {
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No hay documentos asociados a esta unidad.</p>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Terminaciones Tab */}
+        <TabsContent value="terminaciones" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Selecciones de Terminaciones</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {selecciones.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Palette className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No hay selecciones de terminaciones para esta unidad.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Material</TableHead>
+                      <TableHead>Categoría</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selecciones.map((s: any) => (
+                      <TableRow key={s.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded bg-muted overflow-hidden flex-shrink-0">
+                              {s.productos?.foto_url ? (
+                                <img src={s.productos.foto_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="flex items-center justify-center h-full"><Package className="h-4 w-4 text-muted-foreground/30" /></div>
+                              )}
+                            </div>
+                            <span className="font-medium">{s.productos?.nombre}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{s.categoria}</TableCell>
+                        <TableCell>{s.clientes?.nombre} {s.clientes?.apellido}</TableCell>
+                        <TableCell>
+                          <Badge variant={s.estado === 'aprobada' ? 'default' : s.estado === 'rechazada' ? 'destructive' : 'outline'}>
+                            {s.estado}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button size="sm" variant="outline" className="text-xs"
+                              onClick={async () => {
+                                await supabase.from('selecciones_terminacion').update({ estado: 'aprobada' }).eq('id', s.id);
+                                queryClient.invalidateQueries({ queryKey: ['selecciones_terminacion'] });
+                              }}>Aprobar</Button>
+                            <Button size="sm" variant="ghost" className="text-xs text-destructive"
+                              onClick={async () => {
+                                await supabase.from('selecciones_terminacion').update({ estado: 'rechazada' }).eq('id', s.id);
+                                queryClient.invalidateQueries({ queryKey: ['selecciones_terminacion'] });
+                              }}>Rechazar</Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
