@@ -29,6 +29,7 @@ import {
   Sparkles,
   Calculator,
   Newspaper,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ const menuItems = [
 const extraItems = [
   { title: 'Calendario', url: '/calendario', icon: Calendar, module: 'calendario' },
   { title: 'Notas', url: '/notas', icon: StickyNote, module: 'notas' },
+  { title: 'Centro de ayuda', url: '/ayuda', icon: HelpCircle, module: 'ayuda' },
 ];
 
 const adminItems = [
