@@ -145,7 +145,7 @@ const Tesoreria = () => {
 
   const depositarCheque = useCallback(async (id: string) => {
     const hoy = new Date().toISOString().split('T')[0];
-    setC heques(prev => prev.map(c => c.id === id ? { ...c, estado: 'depositado' as const, fechaDeposito: hoy } : c));
+    setCheques(prev => prev.map(c => c.id === id ? { ...c, estado: 'depositado' as const, fechaDeposito: hoy } : c));
     const { error } = await supabase.from('cheques').update({ estado: 'depositado', fecha_deposito: hoy }).eq('id', id);
     if (error) toast.error('Error al depositar cheque');
     else toast.success('Cheque marcado como depositado');
