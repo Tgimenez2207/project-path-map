@@ -1,49 +1,78 @@
 
 
-# Plan: Flujo integrado Cómputo IA → Presupuesto guardado
+# Plan: Integración Materiales + Stock + Catálogo de Terminaciones
 
-## Problema actual
-El Cómputo IA genera una estimación que solo se puede exportar a CSV. Los presupuestos se crean manualmente en otra pestaña. No hay conexión entre ambos.
+## Idea central
 
-## Flujo propuesto
+En lugar de crear una tabla `materiales` separada del stock, **extender la tabla `productos` existente** para que también sirva como catálogo de terminaciones. Así un mismo producto puede estar en el inventario (stock) Y ser una opción de terminación para clientes.
+
+## Estructura actual del Stock
 
 ```text
-┌──────────────┐    "Convertir en     ┌──────────────────┐    Guardar    ┌───────────────┐
-│  Cómputo IA  │──  Presupuesto" ──>  │ Formulario con   │──────────>   │ Presupuesto   │
-│  (genera     │                      │ datos prellenados │              │ en DB con     │
-│   estimación)│                      │ + rubros como     │              │ desglose de   │
-└──────────────┘                      │   ítems detalle   │              │ rubros        │
-                                      └──────────────────┘              └───────────────┘
+productos (catálogo)          stock_items (inventario)
+├── nombre, codigo            ├── producto_id → productos
+├── categoria                 ├── deposito_id → depositos
+├── unidad_medida             └── cantidad
+└── stock_minimo
 ```
 
-## Cambios
+## Cambios propuestos
 
-### 1. Nueva tabla `presupuesto_items` (migración)
-Almacena el desglose por rubros de cada presupuesto:
-- `id`, `presupuesto_id` (FK), `nombre` (rubro), `incidencia`, `costo_min`, `costo_max`, `costo_estimado`, `unidad`, `observaciones`
-- RLS: mismas políticas que `presupuestos`
+### 1. Ampliar tabla `productos` (migración)
 
-### 2. Agregar columna `origen` a `presupuestos` (migración)
-- Campo `origen TEXT DEFAULT 'manual'` para distinguir presupuestos creados manualmente vs generados desde Cómputo IA
-- Campo `datos_computo JSONB` para guardar los supuestos, recomendaciones y parámetros originales del cómputo
+Agregar campos para que funcione como catálogo de materiales/terminaciones:
 
-### 3. Botón "Convertir en Presupuesto" en ComputoIATab
-Después de generar un cómputo, aparece un botón que:
-- Abre un diálogo con datos prellenados (descripción auto-generada, monto total, moneda USD)
-- Permite seleccionar obra y proveedor antes de guardar
-- Al guardar: inserta el presupuesto + todos los rubros como `presupuesto_items`
+- `foto_url` (text) — foto del material
+- `marca` (text) — marca comercial
+- `modelo` (text) — modelo específico
+- `precio_referencia` (numeric) — precio de referencia
+- `moneda` (text, default 'USD')
+- `proveedor_id` (uuid, FK a proveedores, nullable) — proveedor principal
+- `es_terminacion` (bool, default false) — si aplica como opción de terminación para clientes
+- `descripcion` (text) — descripción detallada
+- `caracteristicas` (jsonb) — atributos técnicos (color, medidas, etc.)
 
-### 4. Vista detalle con desglose de rubros en PresupuestosListTab
-- Al ver un presupuesto que tiene ítems, mostrar la tabla de rubros con incidencias y costos
-- Badge "Generado por IA" cuando `origen = 'computo_ia'`
+### 2. Crear tabla `selecciones_terminacion` (migración)
 
-### 5. Historial de cómputos guardados
-- Nueva tabla `computos` para persistir cada cómputo generado (parámetros de entrada + resultado completo)
-- En la pestaña Cómputo IA, mostrar un listado de cómputos anteriores que se pueden volver a ver o convertir en presupuesto
+Para que el cliente elija terminaciones desde el portal:
 
-## Archivos a modificar/crear
-- **Migración SQL**: crear `presupuesto_items`, `computos`, agregar columnas a `presupuestos`
-- `src/components/presupuestos/ComputoIATab.tsx`: botón convertir, historial de cómputos
-- `src/components/presupuestos/PresupuestosListTab.tsx`: vista detalle con rubros, badge origen
-- `src/hooks/useSupabaseData.ts`: hooks para `presupuesto_items` y `computos`
+- `id`, `unidad_id`, `producto_id`, `categoria`, `cliente_id`, `estado` (pendiente/aprobada/rechazada), `notas`, `created_at`
+
+### 3. Página `/materiales` — Catálogo visual (nueva)
+
+Vista de galería con fotos, filtros por categoría, proveedor y precio. CRUD completo. Al crear un material, automáticamente se crea el `producto` en el sistema de stock.
+
+- Filtro toggle "Solo terminaciones" para ver qué productos están disponibles para clientes
+- Badge del stock actual (si tiene stock_items asociados)
+- Link directo al proveedor
+
+### 4. Vincular Stock ↔ Materiales
+
+- Desde Stock: al ver un producto, link "Ver en catálogo" si tiene foto/precio
+- Desde Materiales: badge con cantidad en stock actual, botón "Ver stock" para ir al detalle de inventario
+- Misma tabla `productos` = un solo lugar de verdad
+
+### 5. Portal del cliente — `/portal/terminaciones`
+
+Catálogo filtrado (`es_terminacion = true`) con fotos y precios. El cliente elige por unidad, se guarda en `selecciones_terminacion`.
+
+### 6. Pestaña "Terminaciones" en UnidadDetalle
+
+Ver selecciones del cliente, aprobar/rechazar, con foto del material elegido.
+
+## Archivos a crear/modificar
+
+- **Migración SQL**: ampliar `productos`, crear `selecciones_terminacion` + RLS
+- `src/pages/Materiales.tsx` — Catálogo visual con CRUD
+- `src/pages/Stock.tsx` — Agregar links cruzados al catálogo
+- `src/pages/portal/PortalTerminaciones.tsx` — Selección de terminaciones
+- `src/pages/UnidadDetalle.tsx` — Pestaña terminaciones
+- `src/components/layout/AppSidebar.tsx` — Entrada "Materiales"
+- `src/components/layout/PortalSidebar.tsx` — Entrada "Terminaciones"
+- `src/App.tsx` — Rutas nuevas
+- `src/hooks/useSupabaseData.ts` — Hooks nuevos
+
+## Ventaja de este enfoque
+
+Un solo producto puede ser inventariado en Stock Y ofrecido como terminación al cliente. No hay duplicación de datos. Si comprás 100 m² de porcelanato, el stock se actualiza y el cliente ve la misma ficha con foto y precio.
 
