@@ -1,42 +1,56 @@
 
 
-# Plan: Módulo Gantt de Obra
+# Plan: Directorio Nacional de Proveedores
 
-## Resumen
-Crear un diagrama de Gantt interactivo para visualizar el cronograma de cada obra, con barras posicionadas por tiempo, collapse/expand de etapas, edición inline, y análisis IA del cronograma. Se integra como nueva tab en ObraDetalle y como página standalone.
+## Overview
+Create a new page at `/proveedores/directorio` with a searchable directory of providers, AI-powered web search, reviews system, and import-to-my-providers functionality.
 
-## Archivos a crear
+## Files to create
 
-### 1. `src/types/gantt.ts`
-Tipos `TipoNodo`, `EstadoNodo`, `NodoGantt` según el spec.
+### 1. `src/types/directorio.ts`
+Type definitions as specified (RubroDirectorio, ProveedorDirectorio, ReseñaDirectorio, etc.)
 
-### 2. `src/data/mockGantt.ts`
-~20 nodos con la estructura jerárica especificada (5 etapas, subetapas y tareas), 240 días totales, TODAY_OFFSET=135.
+### 2. `src/data/mockDirectorio.ts`
+16 mock providers with varied rubros, provinces, availability, reviews. Include `calcRating` helper.
 
-### 3. `src/pages/GanttObra.tsx`
-Página completa del Gantt con:
-- **Header**: botón volver, nombre obra, botones "Análisis IA", "Exportar" (print), "Nueva tarea"
-- **Toolbar**: controles de zoom (Meses/Semanas/Días), botón "Hoy" (scroll programático), leyenda de colores
-- **Gantt chart**: div con overflow-x scroll, columna izquierda sticky (260px, z-10, bg sólido) con nombres indentados por tipo + collapse/expand, área derecha con barras coloreadas posicionadas por `left` y `width` calculados con `dayPx`, overlay de avance, línea roja "hoy"
-- **Sheet de detalle** (shadcn Sheet derecha): campos editables para inicio, duración, avance (Slider), responsable, dependencia (Select), estado (Select), notas, botón eliminar
-- **Dialog nuevo nodo**: formulario con nombre, tipo, padre, inicio, duración, responsable, dependencia, crítica, notas
-- **Card de análisis IA**: debajo del Gantt, usa edge function `ai-copilot` (ya existente, ya soporta contexto genérico) para analizar riesgos del cronograma
-- **Mobile**: versión simplificada tipo lista con progress bars
-- Scroll automático al día "hoy" al montar (`useRef` + `scrollTo`)
+### 3. `src/pages/DirectorioProveedores.tsx`
+Full page component with:
+- Header with back navigation to `/proveedores`
+- Search bar with "Buscar con IA" button
+- 4 filter selects (rubro, provincia, rating, disponibilidad) + clear button
+- 3 tabs: Base NATO OBRAS / Resultados IA / Guardados
+- 4 KPI cards (total, verified with reviews, available now, provinces covered)
+- 2-column grid of provider cards (1-col on mobile)
+- Inline expandable detail panel (col-span-2) with contact info, dimension bars, reviews, import/bookmark actions
+- Review submission dialog (4 sliders + comment + optional obra)
+- Review report modal
+- IA loading state with animation
+- Empty states per tab
 
-### 4. Modificar `src/pages/ObraDetalle.tsx`
-- Agregar tab "Cronograma" con ícono `GanttChart` entre "Etapas y Tareas" y "Bitácora"
-- Agregar botón "Ver Gantt completo" en Quick Actions que navega a `/obras/:obraId/cronograma`
-- El contenido de la tab muestra una versión embebida simplificada o un link al Gantt completo
+### 4. AI search via Edge Function
+The spec calls Anthropic directly from the client -- this must go through a Supabase Edge Function using the Lovable AI Gateway instead. Create `supabase/functions/ai-directorio/index.ts` that takes a search query, calls Lovable AI with tool-calling to return structured provider data, and returns JSON.
 
-### 5. Modificar `src/App.tsx`
-- Agregar import y ruta: `<Route path="obras/:obraId/cronograma" element={<GanttObra />} />`
+## Files to modify
 
-## Detalles técnicos
+### 5. `src/App.tsx`
+Add route: `<Route path="proveedores/directorio" element={<DirectorioProveedores />} />`
 
-- **IA**: Reutiliza la edge function `ai-copilot` existente (ya acepta contexto genérico). No se crea nueva edge function.
-- **Sin migraciones DB**: Todo el módulo usa estado local con mock data.
-- **Sticky column**: La columna izquierda usa `position: sticky; left: 0; z-index: 10` con `bg-background` para quedar fija durante scroll horizontal.
-- **Barras**: Posición calculada como `left: nodo.inicioOffset * dayPx`, `width: nodo.duracion * dayPx`. Colores: rojo para ruta crítica, azul para etapas, verde para subetapas, naranja para tareas.
-- **Dependencias**: Se renderizan visualmente como flechas simples (líneas SVG o borders) entre barras conectadas.
+### 6. `src/pages/Proveedores.tsx`
+Add a prominent button in the header linking to `/proveedores/directorio` with Search icon and "Buscar en el directorio nacional" label.
+
+## Technical details
+
+- **AI search**: Edge function `ai-directorio` uses Lovable AI Gateway with `google/gemini-3-flash-preview` and tool-calling to extract structured provider data. The system prompt instructs the model to search for Argentine construction providers.
+- **Inline detail panel**: Rendered by iterating the filtered array and inserting a col-span-2 detail div after the selected card's row position. This requires calculating grid row positions (every 2 cards = 1 row in desktop).
+- **Mobile**: Filters collapse into a Sheet. Grid becomes single column.
+- **Import action**: Updates local state, shows toast. In production this would insert into the `proveedores` Supabase table.
+- **Review form**: 4 Slider components (1-5) for dimensions, optional obra select, textarea comment. Adds review to local state.
+- **No DB migration needed**: This feature uses mock data locally for now, matching the spec's approach.
+
+## Scope
+- ~800 lines for DirectorioProveedores.tsx (large single-page component)
+- ~300 lines for mockDirectorio.ts
+- ~50 lines for types
+- ~80 lines for edge function
+- Minor edits to App.tsx and Proveedores.tsx
 
