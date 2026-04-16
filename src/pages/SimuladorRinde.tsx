@@ -166,6 +166,7 @@ export default function SimuladorRinde() {
                 <Select value={inputs.tipo} onValueChange={(v) => set('tipo', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="edificio">Edificio</SelectItem>
                     <SelectItem value="residencial_ph">Residencial PH</SelectItem>
                     <SelectItem value="casa_duplex">Casa / Duplex</SelectItem>
                     <SelectItem value="comercial">Comercial</SelectItem>
