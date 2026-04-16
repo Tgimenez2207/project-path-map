@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { Newspaper, RefreshCw, Search, Bookmark, ExternalLink, Globe, TrendingUp, AlertCircle, BookmarkCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
@@ -41,6 +41,29 @@ const getCategoriaClass = (cat: CategoriaNoticia): string => ({
   tecnologia: 'border-teal-300 text-teal-700 bg-teal-50',
 }[cat] || '');
 
+const getCategoriaGradient = (cat: CategoriaNoticia): string => ({
+  construccion: 'from-blue-500/80 to-blue-700/90',
+  inmobiliario: 'from-emerald-500/80 to-emerald-700/90',
+  materiales: 'from-amber-500/80 to-amber-700/90',
+  regulatorio: 'from-purple-500/80 to-purple-700/90',
+  economia: 'from-red-500/80 to-red-700/90',
+  tecnologia: 'from-teal-500/80 to-teal-700/90',
+}[cat] || 'from-gray-500/80 to-gray-700/90');
+
+const getCategoriaEmoji = (cat: CategoriaNoticia): string => ({
+  construccion: '🏗️',
+  inmobiliario: '🏢',
+  materiales: '🧱',
+  regulatorio: '📋',
+  economia: '📊',
+  tecnologia: '💡',
+}[cat] || '📰');
+
+function buildSearchUrl(titulo: string, fuente: string): string {
+  const q = encodeURIComponent(`${titulo} ${fuente}`);
+  return `https://www.google.com/search?q=${q}`;
+}
+
 export default function Noticias() {
   const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +76,7 @@ export default function Noticias() {
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
   const [busquedaManual, setBusquedaManual] = useState('');
   const [urlConfirm, setUrlConfirm] = useState<{ url: string; fuente: string } | null>(null);
+
   useEffect(() => {
     fetchNoticias();
   }, []);
@@ -80,6 +104,7 @@ export default function Noticias() {
         return {
           ...n,
           id,
+          url: n.url || buildSearchUrl(n.titulo, n.fuente),
           guardada: guardadasTitulos.includes(n.titulo),
           leida: false,
         };
@@ -244,20 +269,13 @@ export default function Noticias() {
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="h-32 w-full rounded-none" />
               <CardContent className="p-5 space-y-3">
-                <div className="flex justify-between">
-                  <Skeleton className="h-5 w-24" />
-                  <Skeleton className="h-4 w-16" />
-                </div>
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6" />
-                <div className="flex justify-between pt-1">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-6 w-16" />
-                </div>
               </CardContent>
             </Card>
           ))}
@@ -271,26 +289,34 @@ export default function Noticias() {
             <Card
               key={noticia.id}
               className={cn(
-                'cursor-pointer hover:shadow-md transition-all border',
+                'cursor-pointer hover:shadow-md transition-all overflow-hidden',
                 noticia.leida && 'opacity-80',
-                noticia.relevancia === 'alta' && 'border-l-4 border-l-destructive'
+                noticia.relevancia === 'alta' && 'ring-1 ring-destructive/30'
               )}
               onClick={() => { setNoticiaDetalle(noticia); marcarLeida(noticia.id); }}
             >
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="outline" className={getCategoriaClass(noticia.categoria)}>
-                      {getCategoriaLabel(noticia.categoria)}
-                    </Badge>
-                    {noticia.relevancia === 'alta' && (
-                      <Badge variant="destructive" className="text-[10px]">Relevante</Badge>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{noticia.fecha}</span>
+              {/* Category image header */}
+              <div className={cn(
+                'h-28 bg-gradient-to-br flex items-center justify-center relative',
+                getCategoriaGradient(noticia.categoria)
+              )}>
+                <span className="text-5xl opacity-80">{getCategoriaEmoji(noticia.categoria)}</span>
+                <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                  <Badge variant="outline" className="bg-white/90 backdrop-blur-sm border-white/50 text-xs">
+                    {getCategoriaLabel(noticia.categoria)}
+                  </Badge>
+                  {noticia.relevancia === 'alta' && (
+                    <Badge variant="destructive" className="text-[10px]">Relevante</Badge>
+                  )}
                 </div>
-                <h3 className="font-semibold text-foreground leading-snug">{noticia.titulo}</h3>
-                <p className="text-sm text-muted-foreground line-clamp-3">{noticia.resumen}</p>
+                <span className="absolute top-2 right-2 text-[11px] text-white/80 font-medium">
+                  {noticia.fecha}
+                </span>
+              </div>
+
+              <CardContent className="p-4 space-y-2">
+                <h3 className="font-semibold text-foreground leading-snug line-clamp-2">{noticia.titulo}</h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">{noticia.resumen}</p>
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <Globe className="h-3 w-3" />
@@ -307,16 +333,14 @@ export default function Noticias() {
                         ? <BookmarkCheck className="h-4 w-4 text-primary" />
                         : <Bookmark className="h-4 w-4" />}
                     </Button>
-                    {noticia.url && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={e => { e.stopPropagation(); setUrlConfirm({ url: noticia.url!, fuente: noticia.fuente }); }}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={e => { e.stopPropagation(); setUrlConfirm({ url: noticia.url, fuente: noticia.fuente }); }}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -352,50 +376,59 @@ export default function Noticias() {
 
       {/* Detail sheet */}
       <Sheet open={!!noticiaDetalle} onOpenChange={open => !open && setNoticiaDetalle(null)}>
-        <SheetContent className="w-full sm:max-w-[480px] overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-[480px] flex flex-col p-0 gap-0">
           {noticiaDetalle && (
             <>
-              <SheetHeader>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className={getCategoriaClass(noticiaDetalle.categoria)}>
-                    {getCategoriaLabel(noticiaDetalle.categoria)}
-                  </Badge>
-                  {noticiaDetalle.relevancia === 'alta' && (
-                    <Badge variant="destructive">Alta relevancia</Badge>
-                  )}
-                </div>
-                <SheetTitle className="text-left">{noticiaDetalle.titulo}</SheetTitle>
-                <SheetDescription className="text-left">
-                  {noticiaDetalle.fuente} · {noticiaDetalle.fecha}
-                </SheetDescription>
-              </SheetHeader>
+              {/* Image header inside sheet */}
+              <div className={cn(
+                'h-36 sm:h-44 bg-gradient-to-br flex items-center justify-center shrink-0',
+                getCategoriaGradient(noticiaDetalle.categoria)
+              )}>
+                <span className="text-6xl opacity-80">{getCategoriaEmoji(noticiaDetalle.categoria)}</span>
+              </div>
 
-              <div className="mt-6 space-y-6">
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                <SheetHeader className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className={getCategoriaClass(noticiaDetalle.categoria)}>
+                      {getCategoriaLabel(noticiaDetalle.categoria)}
+                    </Badge>
+                    {noticiaDetalle.relevancia === 'alta' && (
+                      <Badge variant="destructive">Alta relevancia</Badge>
+                    )}
+                  </div>
+                  <SheetTitle className="text-left">{noticiaDetalle.titulo}</SheetTitle>
+                  <SheetDescription className="text-left">
+                    {noticiaDetalle.fuente} · {noticiaDetalle.fecha}
+                  </SheetDescription>
+                </SheetHeader>
+
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                   {noticiaDetalle.resumen}
                 </p>
 
-                {noticiaDetalle.url && (
+                {/* Action buttons — always visible */}
+                <div className="space-y-3 pb-4">
                   <Button
                     variant="outline"
                     className="w-full gap-2"
-                    onClick={() => setUrlConfirm({ url: noticiaDetalle.url!, fuente: noticiaDetalle.fuente })}
+                    onClick={() => setUrlConfirm({ url: noticiaDetalle.url, fuente: noticiaDetalle.fuente })}
                   >
                     <ExternalLink className="h-4 w-4" />
                     Leer nota completa
                   </Button>
-                )}
 
-                <Button
-                  variant={noticiaDetalle.guardada ? 'default' : 'outline'}
-                  className="w-full gap-2"
-                  onClick={() => toggleGuardada(noticiaDetalle.id)}
-                >
-                  {noticiaDetalle.guardada
-                    ? <BookmarkCheck className="h-4 w-4" />
-                    : <Bookmark className="h-4 w-4" />}
-                  {noticiaDetalle.guardada ? 'Guardada' : 'Guardar noticia'}
-                </Button>
+                  <Button
+                    variant={noticiaDetalle.guardada ? 'default' : 'outline'}
+                    className="w-full gap-2"
+                    onClick={() => toggleGuardada(noticiaDetalle.id)}
+                  >
+                    {noticiaDetalle.guardada
+                      ? <BookmarkCheck className="h-4 w-4" />
+                      : <Bookmark className="h-4 w-4" />}
+                    {noticiaDetalle.guardada ? 'Guardada' : 'Guardar noticia'}
+                  </Button>
+                </div>
               </div>
             </>
           )}
