@@ -269,7 +269,7 @@ export default function Proveedores() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" onClick={() => navigate('/proveedores/directorio')}>
-            <Search className="h-4 w-4 mr-2" />Buscar en el directorio nacional
+            <Search className="h-4 w-4 mr-2" />Buscar con IA
           </Button>
           {seleccionados.length >= 2 && (
             <Button variant="outline" onClick={() => { setShowComparacion(true); setIaComparacion(''); }}>
