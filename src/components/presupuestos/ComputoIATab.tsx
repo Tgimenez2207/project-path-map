@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useObras, useProveedores } from '@/hooks/useSupabaseData';
@@ -17,7 +18,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Calculator, Sparkles, Building2, Layers, PaintBucket,
-  ArrowRight, DollarSign, TrendingUp, AlertCircle, Lightbulb, FileDown, Loader2, Save, History, FileText
+  ArrowRight, DollarSign, TrendingUp, AlertCircle, Lightbulb, FileDown, Loader2, Save, History, FileText,
+  Upload, FileImage, X, Wand2
 } from 'lucide-react';
 
 interface RubroComputo {
@@ -93,6 +95,15 @@ export default function ComputoIA() {
   const [convertForm, setConvertForm] = useState({ numero: '', obra_id: '', proveedor_id: '', descripcion: '' });
   const [converting, setConverting] = useState(false);
 
+  // Plano upload mode
+  const [modo, setModo] = useState<'manual' | 'plano'>('manual');
+  const [planoFile, setPlanoFile] = useState<File | null>(null);
+  const [planoUrl, setPlanoUrl] = useState<string | null>(null);
+  const [planoPreview, setPlanoPreview] = useState<string | null>(null);
+  const [analizando, setAnalizando] = useState(false);
+  const [analisisPlano, setAnalisisPlano] = useState<any>(null);
+  const [contextoPlano, setContextoPlano] = useState('');
+
   // History
   const { data: historial = [] } = useQuery({
     queryKey: ['computos'],
@@ -141,6 +152,87 @@ export default function ComputoIA() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePlanoSelect = async (file: File) => {
+    const isPdf = file.type === 'application/pdf';
+    const isImg = file.type.startsWith('image/');
+    if (!isPdf && !isImg) {
+      toast({ title: 'Formato no soportado', description: 'Subí un PDF, JPG o PNG.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast({ title: 'Archivo muy grande', description: 'Máximo 20 MB.', variant: 'destructive' });
+      return;
+    }
+    setPlanoFile(file);
+    setAnalisisPlano(null);
+    setPlanoUrl(null);
+
+    if (isImg) {
+      setPlanoPreview(URL.createObjectURL(file));
+    } else {
+      setPlanoPreview(null);
+    }
+
+    // Upload to storage bucket "documentos" / planos/
+    try {
+      const ext = file.name.split('.').pop() || (isPdf ? 'pdf' : 'jpg');
+      const path = `planos/${user?.id || 'anon'}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('documentos').getPublicUrl(path);
+      setPlanoUrl(pub.publicUrl);
+    } catch (e: any) {
+      toast({ title: 'Error al subir el plano', description: e.message, variant: 'destructive' });
+      setPlanoFile(null);
+    }
+  };
+
+  const handleAnalizarPlano = async () => {
+    if (!planoUrl || !planoFile) {
+      toast({ title: 'Subí un plano primero', variant: 'destructive' });
+      return;
+    }
+    setAnalizando(true);
+    setAnalisisPlano(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-plano', {
+        body: { fileUrl: planoUrl, mimeType: planoFile.type, contexto: contextoPlano },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAnalisisPlano(data);
+      // Pre-fill the manual form with detected data
+      if (data.superficieEstimadaM2) setSuperficie(String(Math.round(data.superficieEstimadaM2)));
+      if (data.tipologia) {
+        const match = TIPOLOGIAS.find(t => t.toLowerCase().includes(data.tipologia.toLowerCase().split(' ')[0]));
+        setTipologia(match || data.tipologia);
+      }
+      if (data.cantidadPisos) setPisos(String(data.cantidadPisos));
+      const obs: string[] = [];
+      if (data.ambientesDetectados?.length) obs.push(`Ambientes: ${data.ambientesDetectados.join(', ')}`);
+      if (data.elementosEspeciales?.length) obs.push(`Elementos: ${data.elementosEspeciales.join(', ')}`);
+      if (contextoPlano) obs.push(contextoPlano);
+      if (obs.length) setObservaciones(obs.join('. '));
+
+      toast({ title: 'Plano analizado', description: `Confianza: ${data.confianza}. Revisá los datos y generá el cómputo.` });
+    } catch (e: any) {
+      toast({ title: 'Error al analizar plano', description: e.message, variant: 'destructive' });
+    } finally {
+      setAnalizando(false);
+    }
+  };
+
+  const handleClearPlano = () => {
+    setPlanoFile(null);
+    setPlanoUrl(null);
+    setPlanoPreview(null);
+    setAnalisisPlano(null);
+    setContextoPlano('');
   };
 
   const openConvertDialog = () => {
@@ -247,6 +339,109 @@ export default function ComputoIA() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
+      <Tabs value={modo} onValueChange={(v) => setModo(v as 'manual' | 'plano')}>
+        <TabsList>
+          <TabsTrigger value="manual" className="gap-2"><Calculator className="h-4 w-4" />Manual</TabsTrigger>
+          <TabsTrigger value="plano" className="gap-2"><FileImage className="h-4 w-4" />Desde plano</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="plano" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileImage className="h-5 w-5" /> Subí un plano (PDF o imagen)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!planoFile ? (
+                <label className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/30 rounded-lg p-8 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p className="font-medium">Click para subir o arrastrá un archivo</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, JPG o PNG · máx. 20 MB</p>
+                  <input
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && handlePlanoSelect(e.target.files[0])}
+                  />
+                </label>
+              ) : (
+                <div className="border rounded-lg p-4 flex items-start gap-4">
+                  {planoPreview ? (
+                    <img src={planoPreview} alt="plano" className="h-32 w-32 object-cover rounded border" />
+                  ) : (
+                    <div className="h-32 w-32 rounded border bg-muted flex items-center justify-center">
+                      <FileText className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{planoFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(planoFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    {!planoUrl && <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" />Subiendo...</p>}
+                    {planoUrl && <Badge variant="secondary" className="mt-2">Listo para analizar</Badge>}
+                  </div>
+                  <Button size="icon" variant="ghost" onClick={handleClearPlano}><X className="h-4 w-4" /></Button>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="ctx-plano">Contexto adicional (opcional)</Label>
+                <Textarea
+                  id="ctx-plano"
+                  placeholder="Ej: ubicación CABA, terminación premium, incluye pileta..."
+                  value={contextoPlano}
+                  onChange={(e) => setContextoPlano(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              <Button onClick={handleAnalizarPlano} disabled={!planoUrl || analizando} size="lg">
+                {analizando ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+                {analizando ? 'Analizando plano con IA...' : 'Analizar plano con IA'}
+              </Button>
+
+              {analisisPlano && (
+                <div className="mt-4 border rounded-lg p-4 space-y-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold">Datos extraídos del plano</h4>
+                    <Badge variant={analisisPlano.confianza === 'alta' ? 'default' : analisisPlano.confianza === 'media' ? 'secondary' : 'destructive'}>
+                      Confianza: {analisisPlano.confianza}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div><p className="text-muted-foreground text-xs">Superficie</p><p className="font-semibold">{Math.round(analisisPlano.superficieEstimadaM2 || 0)} m²</p></div>
+                    <div><p className="text-muted-foreground text-xs">Tipología</p><p className="font-semibold">{analisisPlano.tipologia}</p></div>
+                    <div><p className="text-muted-foreground text-xs">Pisos</p><p className="font-semibold">{analisisPlano.cantidadPisos}</p></div>
+                    <div><p className="text-muted-foreground text-xs">Ambientes</p><p className="font-semibold">{analisisPlano.cantidadAmbientes || '—'}</p></div>
+                  </div>
+                  {analisisPlano.ambientesDetectados?.length > 0 && (
+                    <div><p className="text-xs text-muted-foreground">Ambientes detectados:</p><p className="text-sm">{analisisPlano.ambientesDetectados.join(', ')}</p></div>
+                  )}
+                  {analisisPlano.elementosEspeciales?.length > 0 && (
+                    <div><p className="text-xs text-muted-foreground">Elementos especiales:</p><p className="text-sm">{analisisPlano.elementosEspeciales.join(', ')}</p></div>
+                  )}
+                  {analisisPlano.motivoConfianza && (
+                    <p className="text-xs text-muted-foreground italic">{analisisPlano.motivoConfianza}</p>
+                  )}
+                  <div className="bg-background rounded p-3 border-l-4 border-primary">
+                    <p className="text-sm">
+                      ✅ Los datos se cargaron en el formulario <strong>Manual</strong>. Cambiá a esa pestaña para revisar, ajustar (ubicación, terminaciones) y generar el cómputo.
+                    </p>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={() => setModo('manual')}>
+                      Ir al formulario <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                ⚠️ La estimación a partir del plano es referencial. Validá siempre con planos acotados a escala.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="manual" className="mt-4 space-y-6">
       {/* Input form */}
       <Card>
         <CardHeader>
@@ -508,6 +703,8 @@ export default function ComputoIA() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+      </Tabs>
 
       {/* Convert to Presupuesto Dialog */}
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
