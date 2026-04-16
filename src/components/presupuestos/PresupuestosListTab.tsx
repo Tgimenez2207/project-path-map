@@ -341,40 +341,87 @@ export default function Presupuestos() {
 
       {/* View Detail Dialog */}
       <Dialog open={!!viewDialog} onOpenChange={() => setViewDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Presupuesto {viewDialog?.numero}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Presupuesto {viewDialog?.numero}
+              {viewDialog?.origen === 'computo_ia' && (
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="h-3 w-3" />Generado por IA
+                </Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
           {viewDialog && (
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Estado</span>
-                <Badge variant={estadoConfig[viewDialog.estado]?.variant}>{estadoConfig[viewDialog.estado]?.label}</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Monto</span>
-                <span className="font-medium">{viewDialog.moneda} {Number(viewDialog.monto_total).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Obra</span>
-                <span>{(viewDialog as any).obras?.nombre || '-'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Proveedor</span>
-                <span>{(viewDialog as any).proveedores?.razon_social || '-'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Fecha Creación</span>
-                <span>{new Date(viewDialog.fecha_creacion).toLocaleDateString('es-AR')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Validez</span>
-                <span>{viewDialog.fecha_validez ? new Date(viewDialog.fecha_validez).toLocaleDateString('es-AR') : '-'}</span>
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Estado</span>
+                  <Badge variant={estadoConfig[viewDialog.estado]?.variant}>{estadoConfig[viewDialog.estado]?.label}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monto</span>
+                  <span className="font-medium">{viewDialog.moneda} {Number(viewDialog.monto_total).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Obra</span>
+                  <span>{(viewDialog as any).obras?.nombre || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Proveedor</span>
+                  <span>{(viewDialog as any).proveedores?.razon_social || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fecha Creación</span>
+                  <span>{new Date(viewDialog.fecha_creacion).toLocaleDateString('es-AR')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Validez</span>
+                  <span>{viewDialog.fecha_validez ? new Date(viewDialog.fecha_validez).toLocaleDateString('es-AR') : '-'}</span>
+                </div>
               </div>
               <div>
                 <span className="text-muted-foreground">Descripción</span>
                 <p className="mt-1">{viewDialog.descripcion}</p>
               </div>
+
+              {/* Rubros breakdown */}
+              {loadingRubros && (
+                <div className="flex items-center gap-2 text-muted-foreground py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Cargando desglose...
+                </div>
+              )}
+              {rubros.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Desglose por Rubros</h4>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Rubro</TableHead>
+                        <TableHead className="text-right">Incidencia</TableHead>
+                        <TableHead className="text-right">Estimado</TableHead>
+                        <TableHead className="hidden sm:table-cell">Barra</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rubros.map((r: any) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium text-xs">{r.nombre}</TableCell>
+                          <TableCell className="text-right">
+                            <Badge variant="outline" className="text-xs">{Number(r.incidencia).toFixed(1)}%</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-xs">
+                            USD {Number(r.costo_estimado).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell w-24">
+                            <Progress value={Number(r.incidencia)} className="h-2" />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
