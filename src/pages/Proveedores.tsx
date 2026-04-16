@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -52,7 +52,56 @@ const emptyForm = (): Omit<Proveedor, 'id' | 'evaluaciones' | 'cotizaciones' | '
 
 export default function Proveedores() {
   const { toast } = useToast();
-  const [proveedores, setProveedores] = useState<Proveedor[]>(mockProveedores);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data: dbP } = await supabase.from('proveedores').select('*').order('razon_social');
+        const { data: dbEvals } = await supabase.from('evaluaciones_proveedores').select('*');
+        const { data: dbCots } = await supabase.from('cotizaciones_proveedores').select('*');
+        
+        if (dbP && dbP.length > 0) {
+          const mapped: Proveedor[] = dbP.map((p: any) => {
+            const rubroMap: Record<string, RubroProveedor> = { proveedor: 'materiales', contratista: 'subcontratista' };
+            return {
+              id: p.id,
+              razonSocial: p.razon_social,
+              rubro: (p.rubro as RubroProveedor) || rubroMap[p.tipo] || 'otro',
+              subrubro: p.subrubro || p.rubro || '',
+              contacto: p.contacto || '',
+              telefono: p.telefono || '',
+              email: p.email || '',
+              ciudad: p.ciudad || p.direccion || '',
+              provincia: p.provincia || '',
+              cuit: p.cuit || '',
+              web: p.web || '',
+              estado: (p.activo ? 'activo' : 'inactivo') as EstadoProveedor,
+              evaluaciones: (dbEvals || []).filter((e: any) => e.proveedor_id === p.id).map((e: any) => ({
+                id: e.id, fecha: e.fecha, obraNombre: e.obra_nombre, autor: e.autor,
+                puntualidad: e.puntualidad, calidad: e.calidad, precio: e.precio, comunicacion: e.comunicacion,
+                comentario: e.comentario,
+              })),
+              cotizaciones: (dbCots || []).filter((c: any) => c.proveedor_id === p.id).map((c: any) => ({
+                id: c.id, fecha: c.fecha, descripcion: c.descripcion,
+                monto: Number(c.monto), moneda: c.moneda, ganada: c.ganada,
+              })),
+              notas: '',
+              creadoEn: p.created_at?.split('T')[0] || '',
+              enriquecidoIA: p.enriquecido_ia || false,
+              resumenIA: p.resumen_ia || undefined,
+            };
+          });
+          setProveedores(mapped);
+        } else {
+          setProveedores(mockProveedores);
+        }
+      } catch {
+        setProveedores(mockProveedores);
+      }
+    };
+    load();
+  }, []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroRubro, setFiltroRubro] = useState<RubroProveedor | 'todos'>('todos');
   const [filtroEstado, setFiltroEstado] = useState<EstadoProveedor | 'todos'>('todos');
