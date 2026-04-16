@@ -35,6 +35,7 @@ import DashboardFinanciero from "@/pages/DashboardFinanciero";
 import MisTareas from "@/pages/MisTareas";
 import Contratos from "@/pages/Contratos";
 import Tesoreria from "@/pages/Tesoreria";
+import DirectorioProveedores from "@/pages/DirectorioProveedores";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";
@@ -79,6 +80,7 @@ const App = () => (
               <Route path="presupuestos" element={<Presupuestos />} />
               <Route path="clientes" element={<Clientes />} />
               <Route path="proveedores" element={<Proveedores />} />
+              <Route path="proveedores/directorio" element={<DirectorioProveedores />} />
               <Route path="stock" element={<Stock />} />
               <Route path="herramientas" element={<Herramientas />} />
               <Route path="flota" element={<Flota />} />
