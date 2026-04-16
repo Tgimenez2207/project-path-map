@@ -51,9 +51,8 @@ import {
   Clock,
   Calendar,
 } from 'lucide-react';
-import { mockObras } from '@/data/mockObras';
-import { mockUnidades, mockComplementos, mockCompradores } from '@/data/mockUnidades';
-import { mockClientes } from '@/data/mockClientes';
+import { useObra, useUnidad, useComplementos, useCompradores, useClientes } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import { EstadoUnidad, EstadoPago, PlanPago, Cuota } from '@/types';
 import { usePlanPago } from '@/hooks/usePlanPago';
 
