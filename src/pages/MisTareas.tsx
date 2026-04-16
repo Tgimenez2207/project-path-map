@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { mockMisTareas } from '@/data/mockMisTareas';
 import type { TareaPersonal, EstadoTarea, PrioridadTarea, AreaTarea, Subtarea } from '@/types/tareas';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const prioridadConfig: Record<PrioridadTarea, { label: string; color: string; order: number }> = {
   urgente: { label: 'Urgente', color: 'bg-red-100 text-red-700 border-red-200', order: 0 },
@@ -49,7 +51,37 @@ const columnas: { estado: EstadoTarea; label: string }[] = [
 ];
 
 export default function MisTareas() {
-  const [tareas, setTareas] = useState<TareaPersonal[]>(mockMisTareas);
+  const { user } = useAuth();
+  const [tareas, setTareas] = useState<TareaPersonal[]>([]);
+  const [dbMode, setDbMode] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user?.id) { setTareas(mockMisTareas); return; }
+      try {
+        const { data } = await supabase.from('tareas_personales').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+        if (data && data.length > 0) {
+          const mapped: TareaPersonal[] = data.map((t: any) => ({
+            id: t.id, titulo: t.titulo, descripcion: t.descripcion || '',
+            area: (t.area || 'otro') as AreaTarea, prioridad: (t.prioridad || 'media') as PrioridadTarea,
+            estado: (t.estado || 'pendiente') as EstadoTarea, asignadoA: user.email || '',
+            obraId: t.obra_id, obraNombre: t.obra_nombre,
+            fechaVencimiento: t.fecha_vencimiento, fechaCreacion: t.created_at?.split('T')[0] || '',
+            fechaCompletada: t.fecha_completada, tags: [],
+            subtareas: (t.subtareas || []) as Subtarea[], comentarios: [],
+            esDeObra: !!t.obra_id, recurrente: t.recurrente ? { frecuencia: t.frecuencia_recurrencia || 'semanal' } : undefined,
+          }));
+          setTareas(mapped);
+          setDbMode(true);
+        } else {
+          setTareas(mockMisTareas);
+        }
+      } catch {
+        setTareas(mockMisTareas);
+      }
+    };
+    load();
+  }, [user?.id]);
   const [vista, setVista] = useState<'kanban' | 'lista'>('kanban');
   const [filtroArea, setFiltroArea] = useState<AreaTarea | 'todas'>('todas');
   const [filtroPrioridad, setFiltroPrioridad] = useState<PrioridadTarea | 'todas'>('todas');

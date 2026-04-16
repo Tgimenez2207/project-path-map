@@ -14,10 +14,7 @@ import {
   Users, DollarSign, History, ChevronRight, ArrowUpDown,
 } from 'lucide-react';
 import type { BriefingData } from '@/types/briefing';
-import { mockObras, mockEtapas, mockTareas } from '@/data/mockObras';
-import { mockGantt } from '@/data/mockGantt';
-import { mockClientesScoring } from '@/data/mockClientesScoring';
-import { mockProveedores } from '@/data/mockProveedores';
+import { supabase as sbClient } from '@/integrations/supabase/client';
 
 interface BriefingRecord {
   id: string;
