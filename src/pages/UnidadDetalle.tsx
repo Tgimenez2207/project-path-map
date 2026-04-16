@@ -54,6 +54,7 @@ import {
 } from 'lucide-react';
 import { useObra, useUnidad, useComplementos, useCompradores, useClientes, useSeleccionesTerminacion } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { EstadoUnidad, EstadoPago, PlanPago, Cuota } from '@/types';
 import { usePlanPago } from '@/hooks/usePlanPago';
 
@@ -100,7 +101,7 @@ export default function UnidadDetalle() {
   const clientes = clientesData || [];
   const { data: seleccionesData } = useSeleccionesTerminacion(unidadId);
   const selecciones = seleccionesData || [];
-  const clientes = clientesData || [];
+  const queryClient = useQueryClient();
 
   const { planPago, cuotas, crearPlan, registrarPago, calcularResumen } = usePlanPago(unidadId || '');
 
