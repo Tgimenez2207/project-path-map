@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,10 +7,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Zap, RefreshCw, Download, Sparkles, TrendingUp, TrendingDown,
   AlertTriangle, ArrowRight, CheckCircle, Clock, Building2,
-  Users, DollarSign,
+  Users, DollarSign, History, ChevronRight, ArrowUpDown,
 } from 'lucide-react';
 import type { BriefingData } from '@/types/briefing';
 import { mockObras, mockEtapas, mockTareas } from '@/data/mockObras';
@@ -18,31 +19,57 @@ import { mockGantt } from '@/data/mockGantt';
 import { mockClientesScoring } from '@/data/mockClientesScoring';
 import { mockProveedores } from '@/data/mockProveedores';
 
+interface BriefingRecord {
+  id: string;
+  semana: string;
+  datos: BriefingData;
+  resumen_ejecutivo: string | null;
+  created_at: string;
+}
+
 export default function BriefingSemanal() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const navigate = useNavigate();
   const nombreUsuario = profile?.nombre || 'Tomás';
 
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null);
   const [showSlowMsg, setShowSlowMsg] = useState(false);
+  const [historial, setHistorial] = useState<BriefingRecord[]>([]);
+  const [showHistorial, setShowHistorial] = useState(false);
+  const [showComparacion, setShowComparacion] = useState(false);
+  const [comparar, setComparar] = useState<[BriefingRecord | null, BriefingRecord | null]>([null, null]);
 
+  // Load history and current briefing
   useEffect(() => {
-    const cache = localStorage.getItem('briefing_cache');
-    if (cache) {
-      try {
-        const { data, fecha } = JSON.parse(cache);
-        if (fecha === new Date().toDateString()) {
-          setBriefing(data);
-          setUltimaActualizacion(new Date());
-          return;
-        }
-      } catch { /* ignore */ }
-    }
-    generarBriefing();
+    loadHistorial();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
+
+  const loadHistorial = async () => {
+    if (!user?.id) return;
+    const { data } = await supabase
+      .from('briefings')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (data && data.length > 0) {
+      const records = data.map(d => ({ ...d, datos: d.datos as unknown as BriefingData })) as BriefingRecord[];
+      setHistorial(records);
+
+      // Check if latest is from today
+      const latest = records[0];
+      const hoy = new Date().toDateString();
+      const latestDate = new Date(latest.created_at).toDateString();
+      if (latestDate === hoy) {
+        setBriefing(latest.datos);
+        return;
+      }
+    }
+    // No briefing for today → generate
+    generarBriefing();
+  };
 
   useEffect(() => {
     if (!isLoading) { setShowSlowMsg(false); return; }
@@ -50,14 +77,25 @@ export default function BriefingSemanal() {
     return () => clearTimeout(t);
   }, [isLoading]);
 
+  const guardarBriefing = async (briefingData: BriefingData) => {
+    if (!user?.id) return;
+    const { data, error } = await supabase.from('briefings').insert({
+      user_id: user.id,
+      semana: briefingData.semana,
+      datos: briefingData as any,
+      resumen_ejecutivo: briefingData.resumenEjecutivo,
+    }).select().single();
+
+    if (!error && data) {
+      setHistorial(prev => [{ ...data, datos: data.datos as unknown as BriefingData } as BriefingRecord, ...prev]);
+    }
+  };
+
   const generarBriefing = async () => {
     setIsLoading(true);
     setBriefing(null);
 
     const obrasActivas = mockObras.filter(o => o.estado === 'en_curso');
-    const avancePromedio = obrasActivas.length
-      ? Math.round(obrasActivas.reduce((a, o) => a + o.progreso, 0) / obrasActivas.length)
-      : 0;
     const tareasEnRutaCritica = mockGantt.filter(n => n.critica && n.avance < 100);
     const clientesRiesgo = mockClientesScoring.filter(c => c.scoreIA && c.scoreIA.scoreGlobal < 50);
     const proveedoresPendientes = mockProveedores.filter(p => p.estado === 'activo').slice(0, 3);
@@ -96,7 +134,6 @@ export default function BriefingSemanal() {
           }],
         },
       });
-
       if (error) throw error;
 
       const texto = data?.texto || '';
@@ -105,10 +142,7 @@ export default function BriefingSemanal() {
 
       const briefingData: BriefingData = JSON.parse(jsonMatch[0]);
       setBriefing(briefingData);
-      setUltimaActualizacion(new Date());
-      localStorage.setItem('briefing_cache', JSON.stringify({
-        data: briefingData, fecha: new Date().toDateString(),
-      }));
+      await guardarBriefing(briefingData);
     } catch {
       toast({ title: 'Error', description: 'Error al generar el briefing. Intentá de nuevo.', variant: 'destructive' });
     } finally {
@@ -116,9 +150,12 @@ export default function BriefingSemanal() {
     }
   };
 
-  const handleRegenerar = () => {
-    localStorage.removeItem('briefing_cache');
-    generarBriefing();
+  const handleRegenerar = () => generarBriefing();
+
+  const handleCompararSemanas = (a: BriefingRecord, b: BriefingRecord) => {
+    setComparar([a, b]);
+    setShowComparacion(true);
+    setShowHistorial(false);
   };
 
   // No data state
@@ -148,12 +185,6 @@ export default function BriefingSemanal() {
     return { border: 'border-blue-300', bg: 'bg-blue-50', icon: 'text-blue-500', badge: 'bg-blue-100 text-blue-700' };
   };
 
-  const getUrgenciaStyles = (u: string) => {
-    if (u === 'urgente') return 'bg-red-100 text-red-700';
-    if (u === 'esta_semana') return 'bg-amber-100 text-amber-700';
-    return 'bg-blue-100 text-blue-700';
-  };
-
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
@@ -169,8 +200,13 @@ export default function BriefingSemanal() {
           </h1>
         </div>
         <div className="flex gap-2 no-print">
+          {historial.length > 1 && (
+            <Button variant="outline" size="sm" onClick={() => setShowHistorial(true)}>
+              <History className="h-4 w-4 mr-2" />Historial ({historial.length})
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Download className="h-4 w-4 mr-2" />Exportar PDF
+            <Download className="h-4 w-4 mr-2" />PDF
           </Button>
           <Button variant="outline" size="sm" onClick={handleRegenerar} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -198,11 +234,6 @@ export default function BriefingSemanal() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-28 rounded-xl" />
-            ))}
-          </div>
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
         </div>
@@ -397,6 +428,213 @@ export default function BriefingSemanal() {
           </div>
         </>
       )}
+
+      {/* Historial Dialog */}
+      <Dialog open={showHistorial} onOpenChange={setShowHistorial}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Historial de briefings
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Seleccioná dos briefings para comparar semanas.
+            </p>
+            {historial.map((record, idx) => {
+              const d = record.datos;
+              const fecha = new Date(record.created_at);
+              return (
+                <Card
+                  key={record.id}
+                  className={`cursor-pointer transition-all hover:border-primary/50 ${
+                    idx === 0 ? 'border-primary/30 bg-primary/5' : ''
+                  }`}
+                  onClick={() => {
+                    setBriefing(record.datos);
+                    setShowHistorial(false);
+                  }}
+                >
+                  <CardContent className="pt-4 pb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <p className="font-medium text-sm">{d.semana}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {fecha.toLocaleDateString('es-AR', {
+                            weekday: 'long', day: 'numeric', month: 'long',
+                          })}
+                          {idx === 0 && <Badge className="ml-2 text-[10px]" variant="outline">Actual</Badge>}
+                        </p>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        {idx < historial.length - 1 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCompararSemanas(record, historial[idx + 1]);
+                            }}
+                          >
+                            <ArrowUpDown className="h-3 w-3 mr-1" />
+                            vs anterior
+                          </Button>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    {/* Mini KPIs */}
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="text-center">
+                        <p className="text-lg font-bold">{d.kpis.obrasActivas}</p>
+                        <p className="text-[10px] text-muted-foreground">Obras</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-bold">{d.kpis.avancePromedio}%</p>
+                        <p className="text-[10px] text-muted-foreground">Avance</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-bold">{d.alertas.length}</p>
+                        <p className="text-[10px] text-muted-foreground">Alertas</p>
+                      </div>
+                      <div className="text-center">
+                        <p className={`text-lg font-bold ${d.kpis.clientesEnRiesgo > 0 ? 'text-red-500' : ''}`}>
+                          {d.kpis.clientesEnRiesgo}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">Riesgo</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Comparación Dialog */}
+      <Dialog open={showComparacion} onOpenChange={setShowComparacion}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpDown className="h-5 w-5" />
+              Comparación semanal
+            </DialogTitle>
+          </DialogHeader>
+          {comparar[0] && comparar[1] && (
+            <CompararSemanas a={comparar[0]} b={comparar[1]} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CompararSemanas({ a, b }: { a: BriefingRecord; b: BriefingRecord }) {
+  const da = a.datos;
+  const db = b.datos;
+
+  const rows: { label: string; valA: string; valB: string; mejor: 'a' | 'b' | 'equal' }[] = [
+    {
+      label: 'Obras activas',
+      valA: `${da.kpis.obrasActivas}`,
+      valB: `${db.kpis.obrasActivas}`,
+      mejor: da.kpis.obrasActivas >= db.kpis.obrasActivas ? 'a' : 'b',
+    },
+    {
+      label: 'Obras en ruta crítica',
+      valA: `${da.kpis.obrasEnRutaCritica}`,
+      valB: `${db.kpis.obrasEnRutaCritica}`,
+      mejor: da.kpis.obrasEnRutaCritica <= db.kpis.obrasEnRutaCritica ? 'a' : 'b',
+    },
+    {
+      label: 'Avance promedio',
+      valA: `${da.kpis.avancePromedio}%`,
+      valB: `${db.kpis.avancePromedio}%`,
+      mejor: da.kpis.avancePromedio >= db.kpis.avancePromedio ? 'a' : 'b',
+    },
+    {
+      label: 'Pagos pendientes USD',
+      valA: `USD ${da.kpis.pagosPendientesUSD.toLocaleString('es-AR')}`,
+      valB: `USD ${db.kpis.pagosPendientesUSD.toLocaleString('es-AR')}`,
+      mejor: da.kpis.pagosPendientesUSD <= db.kpis.pagosPendientesUSD ? 'a' : 'b',
+    },
+    {
+      label: 'Proveedores pendientes',
+      valA: `${da.kpis.cantProveedoresPendientes}`,
+      valB: `${db.kpis.cantProveedoresPendientes}`,
+      mejor: da.kpis.cantProveedoresPendientes <= db.kpis.cantProveedoresPendientes ? 'a' : 'b',
+    },
+    {
+      label: 'Clientes en riesgo',
+      valA: `${da.kpis.clientesEnRiesgo}`,
+      valB: `${db.kpis.clientesEnRiesgo}`,
+      mejor: da.kpis.clientesEnRiesgo <= db.kpis.clientesEnRiesgo ? 'a' : 'b',
+    },
+    {
+      label: 'Cantidad de alertas',
+      valA: `${da.alertas.length}`,
+      valB: `${db.alertas.length}`,
+      mejor: da.alertas.length <= db.alertas.length ? 'a' : 'b',
+    },
+    {
+      label: 'Alertas críticas',
+      valA: `${da.alertas.filter(x => x.severidad === 'critica').length}`,
+      valB: `${db.alertas.filter(x => x.severidad === 'critica').length}`,
+      mejor: da.alertas.filter(x => x.severidad === 'critica').length <= db.alertas.filter(x => x.severidad === 'critica').length ? 'a' : 'b',
+    },
+  ];
+
+  return (
+    <div className="space-y-4 mt-2">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Métrica</th>
+              <th className="text-center py-2 px-4 font-medium">
+                <span className="text-xs text-muted-foreground block">Semana</span>
+                {da.semana}
+              </th>
+              <th className="text-center py-2 px-4 font-medium">
+                <span className="text-xs text-muted-foreground block">Semana</span>
+                {db.semana}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-b last:border-0">
+                <td className="py-2.5 pr-4 text-muted-foreground">{row.label}</td>
+                <td className={`py-2.5 px-4 text-center font-medium ${
+                  row.mejor === 'a' ? 'text-emerald-600 bg-emerald-50' : ''
+                }`}>{row.valA}</td>
+                <td className={`py-2.5 px-4 text-center font-medium ${
+                  row.mejor === 'b' ? 'text-emerald-600 bg-emerald-50' : ''
+                }`}>{row.valB}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Resúmenes lado a lado */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Resumen — {da.semana}</p>
+            <p className="text-sm leading-relaxed">{da.resumenEjecutivo}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Resumen — {db.semana}</p>
+            <p className="text-sm leading-relaxed">{db.resumenEjecutivo}</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
