@@ -149,6 +149,7 @@ export default function DirectorioProveedores() {
         reseñas: [],
         yaImportado: false,
         guardado: false,
+        fuenteUrl: p.fuenteUrl || p.web || undefined,
       }));
       setResultadosIA(resultados);
       if (!resultados.length) toast({ title: 'No se encontraron resultados. Probá con otro término.' });
@@ -460,8 +461,14 @@ function ProveedorCard({ p, isOpen, onToggle, onImportar, onGuardar, onReseña }
                   <TooltipContent>Verificado por NATO OBRAS</TooltipContent></Tooltip>
               )}
               {p.origen === 'ia_web' && (
-                <Tooltip><TooltipTrigger><Badge variant="outline" className="text-[10px] py-0">IA</Badge></TooltipTrigger>
-                  <TooltipContent>Encontrado por búsqueda web. No verificado por NATO OBRAS.</TooltipContent></Tooltip>
+                <Tooltip><TooltipTrigger><Badge variant="outline" className="text-[10px] py-0">🔍 Web real</Badge></TooltipTrigger>
+                  <TooltipContent>Encontrado en la web con Firecrawl. Datos extraídos de sitios reales.</TooltipContent></Tooltip>
+              )}
+              {p.origen === 'ia_web' && p.fuenteUrl && (
+                <a href={p.fuenteUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                  className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+                  <ExternalLink className="h-3 w-3" />Ver fuente
+                </a>
               )}
               {p.yaImportado && <Badge variant="secondary" className="text-[10px] py-0">Importado</Badge>}
             </div>
