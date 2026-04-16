@@ -171,39 +171,75 @@ export type Database = {
       }
       clientes: {
         Row: {
+          apellido: string | null
+          ciudad: string | null
           created_at: string
+          cuit: string | null
           direccion: string | null
+          dni: string | null
           documento: string
           email: string | null
+          estado_cliente: string | null
           id: string
+          moneda_operado: string | null
+          monto_total_operado: number | null
           nombre: string
           notas: string | null
+          provincia: string | null
+          rubro: string | null
+          score_ia: Json | null
           telefono: string | null
           tipo: Database["public"]["Enums"]["tipo_cliente"]
+          tipo_cliente_app: string | null
+          unidades_compradas: number | null
           updated_at: string
         }
         Insert: {
+          apellido?: string | null
+          ciudad?: string | null
           created_at?: string
+          cuit?: string | null
           direccion?: string | null
+          dni?: string | null
           documento: string
           email?: string | null
+          estado_cliente?: string | null
           id?: string
+          moneda_operado?: string | null
+          monto_total_operado?: number | null
           nombre: string
           notas?: string | null
+          provincia?: string | null
+          rubro?: string | null
+          score_ia?: Json | null
           telefono?: string | null
           tipo?: Database["public"]["Enums"]["tipo_cliente"]
+          tipo_cliente_app?: string | null
+          unidades_compradas?: number | null
           updated_at?: string
         }
         Update: {
+          apellido?: string | null
+          ciudad?: string | null
           created_at?: string
+          cuit?: string | null
           direccion?: string | null
+          dni?: string | null
           documento?: string
           email?: string | null
+          estado_cliente?: string | null
           id?: string
+          moneda_operado?: string | null
+          monto_total_operado?: number | null
           nombre?: string
           notas?: string | null
+          provincia?: string | null
+          rubro?: string | null
+          score_ia?: Json | null
           telefono?: string | null
           tipo?: Database["public"]["Enums"]["tipo_cliente"]
+          tipo_cliente_app?: string | null
+          unidades_compradas?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -432,6 +468,57 @@ export type Database = {
         }
         Relationships: []
       }
+      cotizaciones_proveedores: {
+        Row: {
+          created_at: string
+          descripcion: string
+          fecha: string
+          ganada: boolean
+          id: string
+          moneda: string
+          monto: number
+          obra_id: string | null
+          proveedor_id: string
+        }
+        Insert: {
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          ganada?: boolean
+          id?: string
+          moneda?: string
+          monto?: number
+          obra_id?: string | null
+          proveedor_id: string
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          ganada?: boolean
+          id?: string
+          moneda?: string
+          monto?: number
+          obra_id?: string | null
+          proveedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_proveedores_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cuentas_tesoreria: {
         Row: {
           activa: boolean
@@ -595,6 +682,129 @@ export type Database = {
           },
         ]
       }
+      evaluaciones_clientes: {
+        Row: {
+          autor: string
+          cliente_id: string
+          comentario: string
+          comunicacion: number
+          created_at: string
+          cumplimiento_acuerdos: number
+          fecha: string
+          flexibilidad: number
+          id: string
+          obra_id: string | null
+          obra_nombre: string | null
+          puntualidad_pagos: number
+          recomendaria: boolean
+        }
+        Insert: {
+          autor?: string
+          cliente_id: string
+          comentario?: string
+          comunicacion?: number
+          created_at?: string
+          cumplimiento_acuerdos?: number
+          fecha?: string
+          flexibilidad?: number
+          id?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          puntualidad_pagos?: number
+          recomendaria?: boolean
+        }
+        Update: {
+          autor?: string
+          cliente_id?: string
+          comentario?: string
+          comunicacion?: number
+          created_at?: string
+          cumplimiento_acuerdos?: number
+          fecha?: string
+          flexibilidad?: number
+          id?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          puntualidad_pagos?: number
+          recomendaria?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluaciones_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluaciones_clientes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluaciones_proveedores: {
+        Row: {
+          autor: string
+          calidad: number
+          comentario: string
+          comunicacion: number
+          created_at: string
+          fecha: string
+          id: string
+          obra_id: string | null
+          obra_nombre: string | null
+          precio: number
+          proveedor_id: string
+          puntualidad: number
+        }
+        Insert: {
+          autor?: string
+          calidad?: number
+          comentario?: string
+          comunicacion?: number
+          created_at?: string
+          fecha?: string
+          id?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          precio?: number
+          proveedor_id: string
+          puntualidad?: number
+        }
+        Update: {
+          autor?: string
+          calidad?: number
+          comentario?: string
+          comunicacion?: number
+          created_at?: string
+          fecha?: string
+          id?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          precio?: number
+          proveedor_id?: string
+          puntualidad?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluaciones_proveedores_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluaciones_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventos: {
         Row: {
           color: string
@@ -683,6 +893,63 @@ export type Database = {
           valor_compra?: number | null
         }
         Relationships: []
+      }
+      interacciones_clientes: {
+        Row: {
+          autor: string
+          cliente_id: string
+          created_at: string
+          descripcion: string
+          fecha: string
+          id: string
+          obra_id: string | null
+          obra_nombre: string | null
+          resolucion: string | null
+          tipo: string
+          tono: string
+        }
+        Insert: {
+          autor?: string
+          cliente_id: string
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          id?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          resolucion?: string | null
+          tipo?: string
+          tono?: string
+        }
+        Update: {
+          autor?: string
+          cliente_id?: string
+          created_at?: string
+          descripcion?: string
+          fecha?: string
+          id?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          resolucion?: string | null
+          tipo?: string
+          tono?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interacciones_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interacciones_clientes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       items_presupuesto: {
         Row: {
@@ -945,6 +1212,75 @@ export type Database = {
           },
         ]
       }
+      nodos_gantt: {
+        Row: {
+          avance: number
+          created_at: string
+          critica: boolean | null
+          dependencias: string[] | null
+          duracion: number
+          estado: string
+          id: string
+          inicio: number
+          nombre: string
+          obra_id: string
+          orden: number
+          parent_id: string | null
+          responsable: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          avance?: number
+          created_at?: string
+          critica?: boolean | null
+          dependencias?: string[] | null
+          duracion?: number
+          estado?: string
+          id?: string
+          inicio?: number
+          nombre: string
+          obra_id: string
+          orden?: number
+          parent_id?: string | null
+          responsable?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          avance?: number
+          created_at?: string
+          critica?: boolean | null
+          dependencias?: string[] | null
+          duracion?: number
+          estado?: string
+          id?: string
+          inicio?: number
+          nombre?: string
+          obra_id?: string
+          orden?: number
+          parent_id?: string | null
+          responsable?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nodos_gantt_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nodos_gantt_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "nodos_gantt"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notas: {
         Row: {
           color: string
@@ -1067,6 +1403,63 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      pagos_clientes: {
+        Row: {
+          cliente_id: string
+          concepto: string
+          created_at: string
+          dias_demora: number
+          fecha: string
+          id: string
+          moneda: string
+          monto: number
+          obra_id: string | null
+          obra_nombre: string | null
+          pagado_en_fecha: boolean
+        }
+        Insert: {
+          cliente_id: string
+          concepto?: string
+          created_at?: string
+          dias_demora?: number
+          fecha?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          obra_id?: string | null
+          obra_nombre?: string | null
+          pagado_en_fecha?: boolean
+        }
+        Update: {
+          cliente_id?: string
+          concepto?: string
+          created_at?: string
+          dias_demora?: number
+          fecha?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          obra_id?: string | null
+          obra_nombre?: string | null
+          pagado_en_fecha?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_clientes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_clientes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       planes_pago: {
         Row: {
@@ -1278,42 +1671,63 @@ export type Database = {
       proveedores: {
         Row: {
           activo: boolean
+          ciudad: string | null
+          contacto: string | null
           created_at: string
           cuit: string
           direccion: string | null
           email: string | null
+          enriquecido_ia: boolean | null
           id: string
+          provincia: string | null
           razon_social: string
+          resumen_ia: string | null
           rubro: string
+          subrubro: string | null
           telefono: string | null
           tipo: Database["public"]["Enums"]["tipo_proveedor"]
           updated_at: string
+          web: string | null
         }
         Insert: {
           activo?: boolean
+          ciudad?: string | null
+          contacto?: string | null
           created_at?: string
           cuit: string
           direccion?: string | null
           email?: string | null
+          enriquecido_ia?: boolean | null
           id?: string
+          provincia?: string | null
           razon_social: string
+          resumen_ia?: string | null
           rubro: string
+          subrubro?: string | null
           telefono?: string | null
           tipo?: Database["public"]["Enums"]["tipo_proveedor"]
           updated_at?: string
+          web?: string | null
         }
         Update: {
           activo?: boolean
+          ciudad?: string | null
+          contacto?: string | null
           created_at?: string
           cuit?: string
           direccion?: string | null
           email?: string | null
+          enriquecido_ia?: boolean | null
           id?: string
+          provincia?: string | null
           razon_social?: string
+          resumen_ia?: string | null
           rubro?: string
+          subrubro?: string | null
           telefono?: string | null
           tipo?: Database["public"]["Enums"]["tipo_proveedor"]
           updated_at?: string
+          web?: string | null
         }
         Relationships: []
       }
@@ -1406,6 +1820,74 @@ export type Database = {
           },
           {
             foreignKeyName: "tareas_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tareas_personales: {
+        Row: {
+          area: string
+          created_at: string
+          descripcion: string | null
+          estado: string
+          fecha_completada: string | null
+          fecha_vencimiento: string | null
+          frecuencia_recurrencia: string | null
+          id: string
+          notas: string | null
+          obra_id: string | null
+          obra_nombre: string | null
+          prioridad: string
+          recurrente: boolean | null
+          subtareas: Json | null
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area?: string
+          created_at?: string
+          descripcion?: string | null
+          estado?: string
+          fecha_completada?: string | null
+          fecha_vencimiento?: string | null
+          frecuencia_recurrencia?: string | null
+          id?: string
+          notas?: string | null
+          obra_id?: string | null
+          obra_nombre?: string | null
+          prioridad?: string
+          recurrente?: boolean | null
+          subtareas?: Json | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          descripcion?: string | null
+          estado?: string
+          fecha_completada?: string | null
+          fecha_vencimiento?: string | null
+          frecuencia_recurrencia?: string | null
+          id?: string
+          notas?: string | null
+          obra_id?: string | null
+          obra_nombre?: string | null
+          prioridad?: string
+          recurrente?: boolean | null
+          subtareas?: Json | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tareas_personales_obra_id_fkey"
             columns: ["obra_id"]
             isOneToOne: false
             referencedRelation: "obras"
