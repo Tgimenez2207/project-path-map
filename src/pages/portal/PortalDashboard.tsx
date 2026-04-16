@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { usePortal } from '@/contexts/PortalContext';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,35 +17,56 @@ import {
   AlertCircle,
   Building2,
 } from 'lucide-react';
-import { mockUnidades, mockCompradores, mockPlanesPago, mockCuotas } from '@/data/mockUnidades';
-import { mockObras } from '@/data/mockObras';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function PortalDashboard() {
   const { cliente } = usePortal();
+  const [unidades, setUnidades] = useState<any[]>([]);
+  const [obras, setObras] = useState<any[]>([]);
+  const [cuotas, setCuotas] = useState<any[]>([]);
+  const [totalDeuda, setTotalDeuda] = useState(0);
 
-  // Obtener unidades del cliente
-  const compras = mockCompradores.filter((c) => c.clienteId === cliente?.id);
-  const unidadesIds = compras.map((c) => c.unidadId);
-  const unidades = mockUnidades.filter((u) => unidadesIds.includes(u.id));
+  useEffect(() => {
+    if (!cliente) return;
+    const fetch = async () => {
+      // Get compradores for this client
+      const { data: compras } = await supabase.from('compradores').select('unidad_id').eq('cliente_id', cliente.id);
+      if (!compras || compras.length === 0) return;
+      const uIds = compras.map(c => c.unidad_id);
 
-  // Calcular estadísticas de pagos
-  const planesPago = mockPlanesPago.filter((p) => unidadesIds.includes(p.unidadId || ''));
-  const todasLasCuotas = planesPago.flatMap((p) =>
-    mockCuotas.filter((c) => c.planPagoId === p.id)
-  );
+      // Get unidades
+      const { data: unis } = await supabase.from('unidades').select('*').in('id', uIds);
+      setUnidades(unis || []);
 
-  const cuotasPagadas = todasLasCuotas.filter((c) => c.estado === 'aprobado');
-  const cuotasVencidas = todasLasCuotas.filter((c) => c.estado === 'vencido');
-  const cuotasPendientes = todasLasCuotas.filter((c) => c.estado === 'pendiente');
+      // Get obras
+      const obraIds = [...new Set((unis || []).map(u => u.obra_id))];
+      if (obraIds.length > 0) {
+        const { data: obrasData } = await supabase.from('obras').select('*').in('id', obraIds);
+        setObras(obrasData || []);
+      }
+
+      // Get planes_pago for these unidades
+      const { data: planes } = await supabase.from('planes_pago').select('*').in('unidad_id', uIds);
+      if (planes && planes.length > 0) {
+        setTotalDeuda(planes.reduce((acc, p) => acc + Number(p.monto_total), 0));
+        const planIds = planes.map(p => p.id);
+        const { data: cuotasData } = await supabase.from('cuotas').select('*').in('plan_pago_id', planIds);
+        setCuotas(cuotasData || []);
+      }
+    };
+    fetch();
+  }, [cliente]);
+
+  const cuotasPagadas = cuotas.filter(c => c.estado === 'aprobado');
+  const cuotasVencidas = cuotas.filter(c => c.estado === 'vencido');
+  const cuotasPendientes = cuotas.filter(c => c.estado === 'pendiente');
   const proximaCuota = cuotasPendientes[0] || cuotasVencidas[0];
 
-  const totalPagado = cuotasPagadas.reduce((acc, c) => acc + (c.montoPagado || 0), 0);
-  const totalDeuda = planesPago.reduce((acc, p) => acc + p.montoTotal, 0);
+  const totalPagado = cuotasPagadas.reduce((acc, c) => acc + Number(c.monto_pagado || 0), 0);
   const porcentajePagado = totalDeuda > 0 ? (totalPagado / totalDeuda) * 100 : 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Welcome */}
       <div>
         <h1 className="text-2xl font-semibold">
           ¡Hola, {cliente?.nombre?.split(' ')[0]}!
@@ -114,7 +136,6 @@ export default function PortalDashboard() {
 
       {/* Progress & Next Payment */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Payment Progress */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -149,7 +170,6 @@ export default function PortalDashboard() {
           </CardContent>
         </Card>
 
-        {/* Next Payment */}
         <Card className={proximaCuota?.estado === 'vencido' ? 'border-destructive/50' : ''}>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -164,7 +184,7 @@ export default function PortalDashboard() {
                   <div>
                     <p className="font-medium">Cuota #{proximaCuota.numero}</p>
                     <p className="text-sm text-muted-foreground">
-                      Vence: {new Date(proximaCuota.fechaVencimiento).toLocaleDateString('es-AR')}
+                      Vence: {new Date(proximaCuota.fecha_vencimiento).toLocaleDateString('es-AR')}
                     </p>
                   </div>
                   <Badge variant={proximaCuota.estado === 'vencido' ? 'destructive' : 'outline'}>
@@ -174,11 +194,11 @@ export default function PortalDashboard() {
                 <div className="p-4 rounded-lg bg-muted">
                   <p className="text-sm text-muted-foreground">Monto a pagar</p>
                   <p className="text-2xl font-bold">
-                    USD {(proximaCuota.monto + (proximaCuota.interesMora || 0)).toLocaleString()}
+                    USD {(Number(proximaCuota.monto) + Number(proximaCuota.interes_mora || 0)).toLocaleString()}
                   </p>
-                  {proximaCuota.interesMora && proximaCuota.interesMora > 0 && (
+                  {proximaCuota.interes_mora && Number(proximaCuota.interes_mora) > 0 && (
                     <p className="text-xs text-destructive mt-1">
-                      Incluye USD {proximaCuota.interesMora} de interés por mora
+                      Incluye USD {proximaCuota.interes_mora} de interés por mora
                     </p>
                   )}
                 </div>
@@ -218,7 +238,7 @@ export default function PortalDashboard() {
           ) : (
             <div className="space-y-3">
               {unidades.map((unidad) => {
-                const obra = mockObras.find((o) => o.id === unidad.obraId);
+                const obra = obras.find((o) => o.id === unidad.obra_id);
                 return (
                   <div
                     key={unidad.id}
