@@ -1648,6 +1648,60 @@ export type Database = {
         }
         Relationships: []
       }
+      precios_producto: {
+        Row: {
+          created_at: string
+          fecha_vigencia: string
+          id: string
+          lista: string
+          moneda: string
+          notas: string | null
+          precio: number
+          producto_id: string
+          proveedor_id: string
+          vigente: boolean
+        }
+        Insert: {
+          created_at?: string
+          fecha_vigencia?: string
+          id?: string
+          lista?: string
+          moneda?: string
+          notas?: string | null
+          precio?: number
+          producto_id: string
+          proveedor_id: string
+          vigente?: boolean
+        }
+        Update: {
+          created_at?: string
+          fecha_vigencia?: string
+          id?: string
+          lista?: string
+          moneda?: string
+          notas?: string | null
+          precio?: number
+          producto_id?: string
+          proveedor_id?: string
+          vigente?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precios_producto_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_producto_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presupuesto_rubros: {
         Row: {
           costo_estimado: number
