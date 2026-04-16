@@ -23,6 +23,14 @@ export interface ReseñaDirectorio {
   reportada: boolean;
 }
 
+export interface ReseñaGoogle {
+  autorNombre?: string;
+  fecha?: string;
+  rating?: number;
+  comentario: string;
+  fuenteUrl?: string;
+}
+
 export interface ProveedorDirectorio {
   id: string;
   razonSocial: string;
@@ -44,4 +52,7 @@ export interface ProveedorDirectorio {
   yaImportado: boolean;
   guardado: boolean;
   fuenteUrl?: string;
+  ratingGoogle?: number;
+  cantidadReseñasGoogle?: number;
+  reseñasGoogle?: ReseñaGoogle[];
 }
