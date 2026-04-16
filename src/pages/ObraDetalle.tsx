@@ -13,6 +13,7 @@ import { useObra, useEtapas, useTareas, useBitacora, useUnidades } from '@/hooks
 import { useProveedores } from '@/hooks/useSupabaseData';
 import IACopilotTab from '@/components/obra/IACopilotTab';
 import MarketingDialog from '@/components/obra/MarketingDialog';
+import DocumentosTab from '@/components/obra/DocumentosTab';
 
 const estadoLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   planificacion: { label: 'Planificación', variant: 'secondary' },
@@ -232,7 +233,7 @@ export default function ObraDetalle() {
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-6">
-          <div className="empty-state"><FileText className="empty-state-icon" /><h3 className="empty-state-title">Sin documentos</h3><Button className="mt-4"><Plus className="h-4 w-4 mr-2" />Subir documento</Button></div>
+          <DocumentosTab obraId={obraId!} />
         </TabsContent>
 
         <TabsContent value="contratistas" className="mt-6">

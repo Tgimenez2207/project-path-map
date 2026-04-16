@@ -638,6 +638,56 @@ export type Database = {
         }
         Relationships: []
       }
+      documentos_obra: {
+        Row: {
+          archivo_nombre: string
+          archivo_url: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          obra_id: string
+          subido_por: string
+          tamano: number | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          archivo_nombre: string
+          archivo_url: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          obra_id: string
+          subido_por?: string
+          tamano?: number | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          archivo_nombre?: string
+          archivo_url?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          obra_id?: string
+          subido_por?: string
+          tamano?: number | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_obra_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       etapas: {
         Row: {
           created_at: string
