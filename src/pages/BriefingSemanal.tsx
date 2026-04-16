@@ -92,10 +92,13 @@ export default function BriefingSemanal() {
     setIsLoading(true);
     setBriefing(null);
 
-    const obrasActivas = mockObras.filter(o => o.estado === 'en_curso');
-    const tareasEnRutaCritica = mockGantt.filter(n => n.critica && n.avance < 100);
-    const clientesRiesgo = mockClientesScoring.filter(c => c.scoreIA && c.scoreIA.scoreGlobal < 50);
-    const proveedoresPendientes = mockProveedores.filter(p => p.estado === 'activo').slice(0, 3);
+    // Load data from DB instead of mocks
+    const { data: dbObras } = await sbClient.from('obras').select('*');
+    const { data: dbEtapas } = await sbClient.from('etapas').select('*');
+    const { data: dbProveedores } = await sbClient.from('proveedores').select('*');
+    
+    const obrasActivas = (dbObras || []).filter((o: any) => o.estado === 'en_curso');
+    const proveedoresPendientes = (dbProveedores || []).filter((p: any) => p.activo).slice(0, 3);
 
     const contexto = {
       fecha: new Date().toLocaleDateString('es-AR', {
@@ -106,7 +109,9 @@ export default function BriefingSemanal() {
         nombre: o.nombre, progreso: o.progreso, estado: o.estado,
         presupuesto: o.presupuestoTotal, moneda: o.moneda,
       })),
-      etapas: mockEtapas.map(e => ({ nombre: e.nombre, estado: e.estado, obraId: e.obraId })),
+      etapas: (dbEtapas || []).map((e: any) => ({ nombre: e.nombre, estado: e.estado, obraId: e.obra_id })),
+      tareasEnRutaCritica: [],
+      clientesEnRiesgo: [],
       tareasEnRutaCritica: tareasEnRutaCritica.map(t => ({
         nombre: t.nombre, avance: t.avance, responsable: t.responsable,
         diasSinMover: Math.floor(Math.random() * 7) + 1,
