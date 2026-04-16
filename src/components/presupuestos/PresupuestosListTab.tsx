@@ -230,7 +230,7 @@ export default function Presupuestos() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setViewDialog(p)}>
+                          <DropdownMenuItem onClick={() => handleViewDetail(p)}>
                             <Eye className="h-4 w-4 mr-2" /> Ver detalle
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openEdit(p)}>
