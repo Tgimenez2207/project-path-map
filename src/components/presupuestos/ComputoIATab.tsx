@@ -154,6 +154,87 @@ export default function ComputoIA() {
     }
   };
 
+  const handlePlanoSelect = async (file: File) => {
+    const isPdf = file.type === 'application/pdf';
+    const isImg = file.type.startsWith('image/');
+    if (!isPdf && !isImg) {
+      toast({ title: 'Formato no soportado', description: 'Subí un PDF, JPG o PNG.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast({ title: 'Archivo muy grande', description: 'Máximo 20 MB.', variant: 'destructive' });
+      return;
+    }
+    setPlanoFile(file);
+    setAnalisisPlano(null);
+    setPlanoUrl(null);
+
+    if (isImg) {
+      setPlanoPreview(URL.createObjectURL(file));
+    } else {
+      setPlanoPreview(null);
+    }
+
+    // Upload to storage bucket "documentos" / planos/
+    try {
+      const ext = file.name.split('.').pop() || (isPdf ? 'pdf' : 'jpg');
+      const path = `planos/${user?.id || 'anon'}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('documentos').upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('documentos').getPublicUrl(path);
+      setPlanoUrl(pub.publicUrl);
+    } catch (e: any) {
+      toast({ title: 'Error al subir el plano', description: e.message, variant: 'destructive' });
+      setPlanoFile(null);
+    }
+  };
+
+  const handleAnalizarPlano = async () => {
+    if (!planoUrl || !planoFile) {
+      toast({ title: 'Subí un plano primero', variant: 'destructive' });
+      return;
+    }
+    setAnalizando(true);
+    setAnalisisPlano(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-plano', {
+        body: { fileUrl: planoUrl, mimeType: planoFile.type, contexto: contextoPlano },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAnalisisPlano(data);
+      // Pre-fill the manual form with detected data
+      if (data.superficieEstimadaM2) setSuperficie(String(Math.round(data.superficieEstimadaM2)));
+      if (data.tipologia) {
+        const match = TIPOLOGIAS.find(t => t.toLowerCase().includes(data.tipologia.toLowerCase().split(' ')[0]));
+        setTipologia(match || data.tipologia);
+      }
+      if (data.cantidadPisos) setPisos(String(data.cantidadPisos));
+      const obs: string[] = [];
+      if (data.ambientesDetectados?.length) obs.push(`Ambientes: ${data.ambientesDetectados.join(', ')}`);
+      if (data.elementosEspeciales?.length) obs.push(`Elementos: ${data.elementosEspeciales.join(', ')}`);
+      if (contextoPlano) obs.push(contextoPlano);
+      if (obs.length) setObservaciones(obs.join('. '));
+
+      toast({ title: 'Plano analizado', description: `Confianza: ${data.confianza}. Revisá los datos y generá el cómputo.` });
+    } catch (e: any) {
+      toast({ title: 'Error al analizar plano', description: e.message, variant: 'destructive' });
+    } finally {
+      setAnalizando(false);
+    }
+  };
+
+  const handleClearPlano = () => {
+    setPlanoFile(null);
+    setPlanoUrl(null);
+    setPlanoPreview(null);
+    setAnalisisPlano(null);
+    setContextoPlano('');
+  };
+
   const openConvertDialog = () => {
     if (!result) return;
     const now = new Date();
