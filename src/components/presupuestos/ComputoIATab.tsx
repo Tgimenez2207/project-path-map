@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useObras, useProveedores } from '@/hooks/useSupabaseData';
@@ -17,7 +18,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Calculator, Sparkles, Building2, Layers, PaintBucket,
-  ArrowRight, DollarSign, TrendingUp, AlertCircle, Lightbulb, FileDown, Loader2, Save, History, FileText
+  ArrowRight, DollarSign, TrendingUp, AlertCircle, Lightbulb, FileDown, Loader2, Save, History, FileText,
+  Upload, FileImage, X, Wand2
 } from 'lucide-react';
 
 interface RubroComputo {
