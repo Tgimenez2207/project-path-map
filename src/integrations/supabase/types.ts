@@ -201,6 +201,105 @@ export type Database = {
           },
         ]
       }
+      contratos: {
+        Row: {
+          adjuntos: string[]
+          creado_por: string
+          created_at: string
+          cuerpo: string
+          estado: Database["public"]["Enums"]["estado_contrato"]
+          fecha_creacion: string
+          fecha_fin: string | null
+          fecha_firma: string | null
+          fecha_inicio: string
+          forma_pago: string
+          hitos: Json
+          id: string
+          moneda: Database["public"]["Enums"]["moneda"]
+          monto_total: number
+          notas: string
+          numero: string
+          obra_id: string | null
+          obra_nombre: string | null
+          parte_a: Json
+          parte_b: Json
+          plantilla_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_contrato"]
+          titulo: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          adjuntos?: string[]
+          creado_por?: string
+          created_at?: string
+          cuerpo?: string
+          estado?: Database["public"]["Enums"]["estado_contrato"]
+          fecha_creacion?: string
+          fecha_fin?: string | null
+          fecha_firma?: string | null
+          fecha_inicio?: string
+          forma_pago?: string
+          hitos?: Json
+          id?: string
+          moneda?: Database["public"]["Enums"]["moneda"]
+          monto_total?: number
+          notas?: string
+          numero: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          parte_a?: Json
+          parte_b?: Json
+          plantilla_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_contrato"]
+          titulo: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          adjuntos?: string[]
+          creado_por?: string
+          created_at?: string
+          cuerpo?: string
+          estado?: Database["public"]["Enums"]["estado_contrato"]
+          fecha_creacion?: string
+          fecha_fin?: string | null
+          fecha_firma?: string | null
+          fecha_inicio?: string
+          forma_pago?: string
+          hitos?: Json
+          id?: string
+          moneda?: Database["public"]["Enums"]["moneda"]
+          monto_total?: number
+          notas?: string
+          numero?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          parte_a?: Json
+          parte_b?: Json
+          plantilla_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_contrato"]
+          titulo?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_plantilla_id_fkey"
+            columns: ["plantilla_id"]
+            isOneToOne: false
+            referencedRelation: "plantillas_contrato"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cuotas: {
         Row: {
           created_at: string
@@ -734,6 +833,36 @@ export type Database = {
           },
         ]
       }
+      plantillas_contrato: {
+        Row: {
+          created_at: string
+          cuerpo: string
+          descripcion: string
+          id: string
+          nombre: string
+          tipo: Database["public"]["Enums"]["tipo_contrato"]
+          variables: string[]
+        }
+        Insert: {
+          created_at?: string
+          cuerpo?: string
+          descripcion?: string
+          id?: string
+          nombre: string
+          tipo: Database["public"]["Enums"]["tipo_contrato"]
+          variables?: string[]
+        }
+        Update: {
+          created_at?: string
+          cuerpo?: string
+          descripcion?: string
+          id?: string
+          nombre?: string
+          tipo?: Database["public"]["Enums"]["tipo_contrato"]
+          variables?: string[]
+        }
+        Relationships: []
+      }
       presupuestos: {
         Row: {
           created_at: string
@@ -1136,6 +1265,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "operaciones" | "finanzas" | "ventas" | "cliente"
+      estado_contrato:
+        | "borrador"
+        | "revision"
+        | "pendiente_firma"
+        | "firmado"
+        | "en_ejecucion"
+        | "finalizado"
+        | "rescindido"
       estado_etapa: "pendiente" | "en_curso" | "completada"
       estado_herramienta: "disponible" | "en_uso" | "mantenimiento" | "baja"
       estado_obra:
@@ -1158,6 +1295,14 @@ export type Database = {
       prioridad_tarea: "baja" | "media" | "alta"
       tipo_cliente: "persona" | "empresa"
       tipo_complemento: "cochera" | "baulera"
+      tipo_contrato:
+        | "compraventa"
+        | "locacion_obra"
+        | "subcontrato"
+        | "provision"
+        | "honorarios"
+        | "alquiler"
+        | "otro"
       tipo_movimiento: "ingreso" | "egreso" | "transferencia"
       tipo_proveedor: "proveedor" | "contratista"
       tipo_unidad: "departamento" | "local" | "oficina" | "casa"
@@ -1290,6 +1435,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "operaciones", "finanzas", "ventas", "cliente"],
+      estado_contrato: [
+        "borrador",
+        "revision",
+        "pendiente_firma",
+        "firmado",
+        "en_ejecucion",
+        "finalizado",
+        "rescindido",
+      ],
       estado_etapa: ["pendiente", "en_curso", "completada"],
       estado_herramienta: ["disponible", "en_uso", "mantenimiento", "baja"],
       estado_obra: [
@@ -1314,6 +1468,15 @@ export const Constants = {
       prioridad_tarea: ["baja", "media", "alta"],
       tipo_cliente: ["persona", "empresa"],
       tipo_complemento: ["cochera", "baulera"],
+      tipo_contrato: [
+        "compraventa",
+        "locacion_obra",
+        "subcontrato",
+        "provision",
+        "honorarios",
+        "alquiler",
+        "otro",
+      ],
       tipo_movimiento: ["ingreso", "egreso", "transferencia"],
       tipo_proveedor: ["proveedor", "contratista"],
       tipo_unidad: ["departamento", "local", "oficina", "casa"],
