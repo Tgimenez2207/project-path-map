@@ -28,61 +28,50 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
-    // Build search queries
-    const queries = busqueda
-      ? [`${busqueda} Argentina construcción`]
-      : [
-          "construcción inmobiliario Argentina noticias",
-          "precios materiales construcción Argentina",
-          "mercado inmobiliario créditos hipotecarios Argentina",
-        ];
+    // Build search queries - use single combined query to avoid timeouts
+    const searchQuery = busqueda
+      ? `${busqueda} Argentina construcción`
+      : "construcción inmobiliario materiales créditos hipotecarios Argentina noticias";
 
-    // Step 1: Search real news with Firecrawl
-    console.log("Searching news with Firecrawl:", queries);
-    const allResults: any[] = [];
+    // Step 1: Search real news with Firecrawl (single query to stay within timeout)
+    console.log("Searching news with Firecrawl:", searchQuery);
 
-    for (const query of queries) {
-      try {
-        const searchResponse = await fetch("https://api.firecrawl.dev/v2/search", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${FIRECRAWL_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query,
-            limit: 8,
-            lang: "es",
-            country: "AR",
-            tbs: "qdr:w", // Last week
-            scrapeOptions: {
-              formats: ["markdown"],
-            },
-          }),
+    const searchResponse = await fetch("https://api.firecrawl.dev/v2/search", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: searchQuery,
+        limit: 15,
+        lang: "es",
+        country: "AR",
+        tbs: "qdr:w",
+        scrapeOptions: {
+          formats: ["markdown"],
+        },
+      }),
+    });
+
+    if (!searchResponse.ok) {
+      const errText = await searchResponse.text();
+      console.error("Firecrawl search error:", searchResponse.status, errText);
+      if (searchResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos de búsqueda agotados." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
-
-        if (!searchResponse.ok) {
-          const errText = await searchResponse.text();
-          console.error(`Firecrawl search error for "${query}":`, searchResponse.status, errText);
-          if (searchResponse.status === 402) {
-            return new Response(JSON.stringify({ error: "Créditos de búsqueda agotados." }), {
-              status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          continue;
-        }
-
-        const searchData = await searchResponse.json();
-        const rawData = searchData.data;
-        const results = Array.isArray(rawData) ? rawData
-          : rawData?.web && Array.isArray(rawData.web) ? rawData.web
-          : [];
-
-        allResults.push(...results);
-      } catch (e) {
-        console.error(`Error searching "${query}":`, e);
       }
+      throw new Error(`Firecrawl error: ${searchResponse.status}`);
     }
+
+    const searchData = await searchResponse.json();
+    const rawData = searchData.data;
+    const allResults = Array.isArray(rawData) ? rawData
+      : rawData?.web && Array.isArray(rawData.web) ? rawData.web
+      : [];
+
+    console.log(`Firecrawl returned ${allResults.length} results`);
 
     console.log(`Total Firecrawl results: ${allResults.length}`);
 
