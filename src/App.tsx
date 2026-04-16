@@ -33,6 +33,7 @@ import CentroAyuda from "@/pages/CentroAyuda";
 import BriefingSemanal from "@/pages/BriefingSemanal";
 import DashboardFinanciero from "@/pages/DashboardFinanciero";
 import MisTareas from "@/pages/MisTareas";
+import Contratos from "@/pages/Contratos";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="simulador" element={<SimuladorRinde />} />
               <Route path="noticias" element={<Noticias />} />
               <Route path="mis-tareas" element={<MisTareas />} />
+              <Route path="contratos" element={<Contratos />} />
               <Route path="ayuda" element={<CentroAyuda />} />
             </Route>
 
