@@ -324,6 +324,56 @@ export type Database = {
           },
         ]
       }
+      computos: {
+        Row: {
+          created_at: string
+          id: string
+          observaciones: string | null
+          pisos: number
+          presupuesto_id: string | null
+          resultado: Json
+          superficie: number
+          terminaciones: string
+          tipologia: string
+          ubicacion: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          observaciones?: string | null
+          pisos?: number
+          presupuesto_id?: string | null
+          resultado: Json
+          superficie: number
+          terminaciones?: string
+          tipologia: string
+          ubicacion: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          observaciones?: string | null
+          pisos?: number
+          presupuesto_id?: string | null
+          resultado?: Json
+          superficie?: number
+          terminaciones?: string
+          tipologia?: string
+          ubicacion?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "computos_presupuesto_id_fkey"
+            columns: ["presupuesto_id"]
+            isOneToOne: false
+            referencedRelation: "presupuestos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contratos: {
         Row: {
           adjuntos: string[]
@@ -1598,9 +1648,57 @@ export type Database = {
         }
         Relationships: []
       }
+      presupuesto_rubros: {
+        Row: {
+          costo_estimado: number
+          costo_max: number | null
+          costo_min: number | null
+          created_at: string
+          id: string
+          incidencia: number
+          nombre: string
+          observaciones: string | null
+          presupuesto_id: string
+          unidad: string
+        }
+        Insert: {
+          costo_estimado?: number
+          costo_max?: number | null
+          costo_min?: number | null
+          created_at?: string
+          id?: string
+          incidencia?: number
+          nombre: string
+          observaciones?: string | null
+          presupuesto_id: string
+          unidad?: string
+        }
+        Update: {
+          costo_estimado?: number
+          costo_max?: number | null
+          costo_min?: number | null
+          created_at?: string
+          id?: string
+          incidencia?: number
+          nombre?: string
+          observaciones?: string | null
+          presupuesto_id?: string
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presupuesto_rubros_presupuesto_id_fkey"
+            columns: ["presupuesto_id"]
+            isOneToOne: false
+            referencedRelation: "presupuestos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presupuestos: {
         Row: {
           created_at: string
+          datos_computo: Json | null
           descripcion: string
           estado: Database["public"]["Enums"]["estado_presupuesto"]
           fecha_creacion: string
@@ -1610,11 +1708,13 @@ export type Database = {
           monto_total: number
           numero: string
           obra_id: string | null
+          origen: string
           proveedor_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          datos_computo?: Json | null
           descripcion: string
           estado?: Database["public"]["Enums"]["estado_presupuesto"]
           fecha_creacion?: string
@@ -1624,11 +1724,13 @@ export type Database = {
           monto_total: number
           numero: string
           obra_id?: string | null
+          origen?: string
           proveedor_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          datos_computo?: Json | null
           descripcion?: string
           estado?: Database["public"]["Enums"]["estado_presupuesto"]
           fecha_creacion?: string
@@ -1638,6 +1740,7 @@ export type Database = {
           monto_total?: number
           numero?: string
           obra_id?: string | null
+          origen?: string
           proveedor_id?: string | null
           updated_at?: string
         }
