@@ -19,8 +19,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Naranja Rappi */
-    --primary: 24 100% 50%;
+    /* Azul teal #287490 */
+    --primary: 196 57% 36%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 30 20% 96%;
@@ -29,15 +29,15 @@
     --muted: 30 15% 94%;
     --muted-foreground: 220 10% 46%;
 
-    --accent: 24 100% 96%;
-    --accent-foreground: 24 100% 40%;
+    --accent: 196 57% 96%;
+    --accent-foreground: 196 57% 30%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 30 15% 90%;
     --input: 30 15% 90%;
-    --ring: 24 100% 50%;
+    --ring: 196 57% 36%;
 
     --radius: 0.75rem;
 
@@ -52,12 +52,12 @@
     /* Sidebar claro estilo Rappi */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 20%;
-    --sidebar-primary: 24 100% 50%;
+    --sidebar-primary: 196 57% 36%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 100% 97%;
-    --sidebar-accent-foreground: 24 100% 40%;
+    --sidebar-accent: 196 57% 97%;
+    --sidebar-accent-foreground: 196 57% 30%;
     --sidebar-border: 30 15% 92%;
-    --sidebar-ring: 24 100% 50%;
+    --sidebar-ring: 196 57% 36%;
     --sidebar-muted: 30 15% 96%;
   }
 
@@ -71,8 +71,8 @@
     --popover: 222 47% 9%;
     --popover-foreground: 30 20% 98%;
 
-    /* Naranja Rappi en modo oscuro */
-    --primary: 24 100% 55%;
+    /* Azul teal en modo oscuro */
+    --primary: 196 57% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 222 47% 15%;
@@ -81,25 +81,25 @@
     --muted: 222 47% 15%;
     --muted-foreground: 220 20% 65%;
 
-    --accent: 24 100% 15%;
-    --accent-foreground: 24 100% 70%;
+    --accent: 196 57% 15%;
+    --accent-foreground: 196 57% 75%;
 
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 222 47% 18%;
     --input: 222 47% 18%;
-    --ring: 24 100% 55%;
+    --ring: 196 57% 45%;
 
     /* Sidebar oscuro con acentos naranja */
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 30 15% 85%;
-    --sidebar-primary: 24 100% 55%;
+    --sidebar-primary: 196 57% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 100% 12%;
-    --sidebar-accent-foreground: 24 100% 70%;
+    --sidebar-accent: 196 57% 12%;
+    --sidebar-accent-foreground: 196 57% 75%;
     --sidebar-border: 222 47% 15%;
-    --sidebar-ring: 24 100% 55%;
+    --sidebar-ring: 196 57% 45%;
     --sidebar-muted: 222 47% 15%;
   }
 }
@@ -199,9 +199,9 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
-  /* Gradiente Rappi */
+  /* Gradiente teal */
   .gradient-rappi {
-    background: linear-gradient(135deg, hsl(24 100% 50%) 0%, hsl(24 100% 60%) 100%);
+    background: linear-gradient(135deg, hsl(196 57% 36%) 0%, hsl(196 57% 45%) 100%);
   }
 }
 
