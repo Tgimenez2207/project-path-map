@@ -31,6 +31,7 @@ import {
   Newspaper,
   HelpCircle,
   Zap,
+  BarChart2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ import { Button } from '@/components/ui/button';
 const menuItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard, module: 'dashboard' },
   { title: 'Briefing semanal', url: '/briefing', icon: Zap, module: 'dashboard' },
+  { title: 'Finanzas', url: '/finanzas', icon: BarChart2, module: 'presupuestos' },
   { title: 'Obras', url: '/obras', icon: Building2, module: 'obras' },
   { title: 'Presupuestos', url: '/presupuestos', icon: FileText, module: 'presupuestos' },
   { title: 'Clientes', url: '/clientes', icon: Users, module: 'clientes' },
