@@ -89,10 +89,14 @@ export default function UnidadDetalle() {
     fechaInicio: new Date().toISOString().split('T')[0],
   });
 
-  const obra = mockObras.find((o) => o.id === obraId);
-  const unidad = mockUnidades.find((u) => u.id === unidadId);
-  const complementos = mockComplementos.filter((c) => c.unidadId === unidadId);
-  const compradores = mockCompradores.filter((c) => c.unidadId === unidadId);
+  const { data: obra } = useObra(obraId);
+  const { data: unidad } = useUnidad(unidadId);
+  const { data: complementosData } = useComplementos(unidadId);
+  const { data: compradoresData } = useCompradores(unidadId);
+  const { data: clientesData } = useClientes();
+  const complementos = complementosData || [];
+  const compradores = compradoresData || [];
+  const clientes = clientesData || [];
 
   const { planPago, cuotas, crearPlan, registrarPago, calcularResumen } = usePlanPago(unidadId || '');
 
@@ -110,7 +114,7 @@ export default function UnidadDetalle() {
 
   // Calcular totales
   const totalComplementos = complementos.reduce((acc, c) => acc + c.precio, 0);
-  const totalUnidad = unidad.precioLista + totalComplementos;
+  const totalUnidad = unidad.precio_lista + totalComplementos;
   const resumen = calcularResumen(totalUnidad);
 
   const handleCrearPlan = () => {
@@ -302,7 +306,7 @@ export default function UnidadDetalle() {
                   <div>
                     <p className="text-sm text-muted-foreground">Precio Lista</p>
                     <p className="font-medium">
-                      {unidad.moneda} {unidad.precioLista.toLocaleString()}
+                      {unidad.moneda} {unidad.precio_lista.toLocaleString()}
                     </p>
                   </div>
                   <div>
@@ -356,7 +360,7 @@ export default function UnidadDetalle() {
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockClientes.map((cliente) => (
+                          {clientes.map((cliente) => (
                             <SelectItem key={cliente.id} value={cliente.id}>
                               {cliente.nombre}
                             </SelectItem>
@@ -405,8 +409,8 @@ export default function UnidadDetalle() {
                   </TableHeader>
                   <TableBody>
                     {compradores.map((comprador) => {
-                      const cliente = mockClientes.find(
-                        (c) => c.id === comprador.clienteId
+                      const cliente = clientes.find(
+                        (c) => c.id === comprador.cliente_id
                       );
                       return (
                         <TableRow key={comprador.id}>
@@ -418,7 +422,7 @@ export default function UnidadDetalle() {
                             <Badge variant="secondary">{comprador.porcentaje}%</Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(comprador.fechaAsignacion).toLocaleDateString('es-AR')}
+                            {new Date(comprador.fecha_asignacion).toLocaleDateString('es-AR')}
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -650,7 +654,7 @@ export default function UnidadDetalle() {
                         <div className="p-4 rounded-lg bg-muted">
                           <div className="flex justify-between text-sm mb-1">
                             <span>Precio unidad:</span>
-                            <span>USD {unidad.precioLista.toLocaleString()}</span>
+                            <span>USD {unidad.precio_lista.toLocaleString()}</span>
                           </div>
                           {totalComplementos > 0 && (
                             <div className="flex justify-between text-sm mb-1">

@@ -15,8 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { HardHat, Mail, Lock, User } from 'lucide-react';
 import { usePortal } from '@/contexts/PortalContext';
-import { mockClientes } from '@/data/mockClientes';
-import { mockCompradores } from '@/data/mockUnidades';
+import { supabase } from '@/integrations/supabase/client';
 
 function PortalLoginContent() {
   const navigate = useNavigate();
@@ -26,6 +25,7 @@ function PortalLoginContent() {
   const [password, setPassword] = useState('');
   const [selectedCliente, setSelectedCliente] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [clientesConUnidades, setClientesConUnidades] = useState<any[]>([]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -33,10 +33,16 @@ function PortalLoginContent() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Obtener clientes que tienen unidades (compradores)
-  const clientesConUnidades = mockClientes.filter((cliente) =>
-    mockCompradores.some((c) => c.clienteId === cliente.id)
-  );
+  useEffect(() => {
+    const fetchClientes = async () => {
+      const { data: compradores } = await supabase.from('compradores').select('cliente_id');
+      if (!compradores || compradores.length === 0) return;
+      const clienteIds = [...new Set(compradores.map(c => c.cliente_id))];
+      const { data: clientes } = await supabase.from('clientes').select('id, nombre').in('id', clienteIds);
+      setClientesConUnidades(clientes || []);
+    };
+    fetchClientes();
+  }, []);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
