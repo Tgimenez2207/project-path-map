@@ -59,9 +59,21 @@ const getCategoriaEmoji = (cat: CategoriaNoticia): string => ({
   tecnologia: '💡',
 }[cat] || '📰');
 
-function buildSearchUrl(titulo: string, fuente: string): string {
-  const q = encodeURIComponent(`${titulo} ${fuente}`);
-  return `https://www.google.com/search?q=${q}`;
+const fuenteUrls: Record<string, string> = {
+  'Infobae': 'https://www.infobae.com/economia/',
+  'La Nación': 'https://www.lanacion.com.ar/propiedades/',
+  'Clarín': 'https://www.clarin.com/economia/',
+  'Ámbito': 'https://www.ambito.com/economia/',
+  'El Cronista': 'https://www.cronista.com/real-estate/',
+  'INDEC': 'https://www.indec.gob.ar/',
+  'BCRA': 'https://www.bcra.gob.ar/',
+  'CAC': 'https://www.camarco.org.ar/',
+  'CEDU': 'https://cedu.com.ar/',
+  'UOCRA': 'https://www.uocra.org/',
+};
+
+function buildFallbackUrl(titulo: string, fuente: string): string {
+  return fuenteUrls[fuente] || `https://www.google.com/search?q=${encodeURIComponent(`${titulo} ${fuente} Argentina`)}`;
 }
 
 export default function Noticias() {
@@ -104,7 +116,7 @@ export default function Noticias() {
         return {
           ...n,
           id,
-          url: n.url || buildSearchUrl(n.titulo, n.fuente),
+          url: n.url || buildFallbackUrl(n.titulo, n.fuente),
           guardada: guardadasTitulos.includes(n.titulo),
           leida: false,
         };

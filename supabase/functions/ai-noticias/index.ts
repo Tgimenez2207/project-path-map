@@ -41,6 +41,7 @@ IMPORTANTE: Devolvé ÚNICAMENTE un JSON válido con este formato exacto, sin te
       "resumen": "2-3 oraciones explicando la noticia y por qué importa para el sector. En español rioplatense.",
       "categoria": "construccion" | "inmobiliario" | "materiales" | "regulatorio" | "economia" | "tecnologia",
       "fuente": "nombre del medio o institución",
+      "url": "URL real y válida del artículo original en el sitio del medio. Debe ser una URL directa al artículo, NO un enlace a Google. Ejemplo: https://www.infobae.com/economia/2025/04/construccion-costos. Si no conocés la URL exacta, usá la URL de la sección relevante del medio (ej: https://www.lanacion.com.ar/propiedades/, https://www.infobae.com/economia/, https://www.cronista.com/real-estate/).",
       "fecha": "fecha aproximada en formato DD/MM/YYYY",
       "relevancia": "alta" | "media" | "baja"
     }
