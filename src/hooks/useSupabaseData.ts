@@ -234,6 +234,41 @@ export function useTareasAll() {
   });
 }
 
+export function useEventosHoy(userId?: string) {
+  return useQuery({
+    queryKey: ['eventos_hoy', userId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('eventos')
+        .select('*')
+        .gte('fecha_inicio', `${today}T00:00:00`)
+        .lte('fecha_inicio', `${today}T23:59:59`)
+        .order('fecha_inicio');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useNotasRecientes(userId?: string) {
+  return useQuery({
+    queryKey: ['notas_recientes', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notas')
+        .select('*')
+        .eq('user_id', userId!)
+        .order('updated_at', { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
+  });
+}
+
 export function useStockAlerts() {
   return useQuery({
     queryKey: ['stock_alerts'],

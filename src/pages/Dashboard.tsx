@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Building2, DollarSign, Users, Package, Plus, ArrowUpRight, TrendingUp, AlertTriangle, ListTodo, Gauge,
+  Building2, DollarSign, Users, Package, Plus, ArrowUpRight, TrendingUp, AlertTriangle, ListTodo, Gauge, CalendarClock, StickyNote, Clock,
 } from 'lucide-react';
-import { useObras, useUnidades, useClientes, useCuotas, useTareasAll, useStockAlerts, useVehiculos } from '@/hooks/useSupabaseData';
+import { useObras, useUnidades, useClientes, useCuotas, useTareasAll, useStockAlerts, useVehiculos, useEventosHoy, useNotasRecientes } from '@/hooks/useSupabaseData';
 import { Link } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
