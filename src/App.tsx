@@ -36,6 +36,7 @@ import MisTareas from "@/pages/MisTareas";
 import Contratos from "@/pages/Contratos";
 import Tesoreria from "@/pages/Tesoreria";
 import DirectorioProveedores from "@/pages/DirectorioProveedores";
+import ComputoIA from "@/pages/ComputoIA";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";

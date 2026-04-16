@@ -53,6 +53,7 @@ const menuItems = [
   { title: 'Flota', url: '/flota', icon: Car, module: 'flota' },
   { title: 'Asistente IA', url: '/ia', icon: Sparkles, module: 'ia' },
   { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
+  { title: 'Cómputo IA', url: '/computo-ia', icon: Sparkles, module: 'presupuestos' },
   { title: 'Noticias del sector', url: '/noticias', icon: Newspaper, module: 'noticias' },
   { title: 'Mis tareas', url: '/mis-tareas', icon: CheckSquare, module: 'dashboard' },
   { title: 'Contratos', url: '/contratos', icon: FileSignature, module: 'presupuestos' },
