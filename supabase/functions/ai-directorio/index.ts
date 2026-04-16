@@ -53,8 +53,13 @@ serve(async (req) => {
     }
 
     const searchData = await searchResponse.json();
-    const results = searchData.data || [];
+    console.log("Firecrawl raw keys:", Object.keys(searchData));
+    const results = searchData.data || searchData.results || [];
     console.log(`Firecrawl returned ${results.length} results`);
+    if (results.length > 0) {
+      console.log("First result keys:", Object.keys(results[0]));
+      console.log("First result title:", results[0].title || results[0].url || "no title");
+    }
 
     if (!results.length) {
       return new Response(JSON.stringify({ proveedores: [] }), {
