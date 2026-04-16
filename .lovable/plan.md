@@ -1,57 +1,58 @@
 
+# Plan: Cómputo IA desde plano (PDF/imagen)
 
-# Plan: Multi-proveedor con listas de precios y comparador
+## Idea
+Sumar al **Cómputo IA** la opción de subir un plano (PDF o imagen) y que la IA estime superficies, ambientes y cómputo a partir del análisis visual, además del modo manual actual.
 
-## Problema actual
-Cada producto tiene un solo `proveedor_id` y un solo `precio_referencia`. No se pueden asociar múltiples proveedores ni comparar precios entre ellos.
-
-## Cambios propuestos
-
-### 1. Nueva tabla `precios_producto` (migración)
-
-Tabla intermedia que vincula productos con proveedores y sus precios:
+## Flujo
 
 ```text
-precios_producto
-├── id (uuid, PK)
-├── producto_id (uuid, FK → productos)
-├── proveedor_id (uuid, FK → proveedores)
-├── precio (numeric)
-├── moneda (text, default 'USD')
-├── lista (text) — nombre de lista de precios (ej: "Lista Mayorista", "Lista Minorista")
-├── fecha_vigencia (date) — desde cuándo aplica este precio
-├── vigente (boolean, default true)
-├── notas (text, nullable)
-├── created_at (timestamptz)
+┌──────────────┐   sube plano    ┌──────────────┐   análisis    ┌─────────────────┐
+│ Cómputo IA   │ ──────────────► │ Edge Function│ ────────────► │ Gemini Vision   │
+│ (tab nuevo)  │   PDF/JPG/PNG   │ ai-plano     │   imagen+ctx  │ extrae datos    │
+└──────────────┘                 └──────────────┘                └─────────────────┘
+                                        │
+                                        ▼
+                              ┌─────────────────────┐
+                              │ Pre-completa form   │
+                              │ Cómputo IA + edita  │
+                              │ → Genera cómputo    │
+                              │ → Convierte a $     │
+                              └─────────────────────┘
 ```
 
-RLS: mismas políticas que `productos` (admin/ops escritura, authenticated lectura).
+## Cambios
 
-### 2. Actualizar Materiales.tsx
+### 1. UI — `ComputoIATab.tsx`
+- Dos modos en tabs internos: **"Manual"** (actual) y **"Desde plano"** (nuevo).
+- Modo "Desde plano":
+  - Dropzone para subir PDF/JPG/PNG (sube a bucket `documentos`, carpeta `planos/`).
+  - Preview del archivo.
+  - Campos opcionales de contexto: ubicación, nivel de terminaciones, observaciones.
+  - Botón "Analizar plano con IA" → llama a `ai-plano`.
+  - Resultado: muestra datos extraídos (superficie estimada, tipología detectada, ambientes, observaciones) en un formulario editable.
+  - Botón "Generar cómputo" reutiliza el flujo existente de `ai-computo` con esos datos.
 
-- **En la tarjeta del material**: mostrar cantidad de proveedores asociados y rango de precio (min-max) en lugar de un solo precio.
-- **En el formulario de edición**: reemplazar el campo "Proveedor" + "Precio ref." por una sección "Proveedores y Precios" donde se pueden agregar/quitar filas (proveedor, precio, moneda, lista, fecha).
-- **Nuevo botón "Comparar precios"** en cada tarjeta: abre un diálogo con tabla comparativa de todos los proveedores/listas para ese producto, ordenada por precio.
+### 2. Edge function nueva — `supabase/functions/ai-plano/index.ts`
+- Recibe `{ imageUrl, contexto }`.
+- Llama a Lovable AI Gateway con `google/gemini-2.5-pro` (vision-capable, mejor para planos).
+- System prompt: experto en lectura de planos arquitectónicos argentinos.
+- Tool calling para devolver estructura: `{ superficieEstimadaM2, tipologia, cantidadAmbientes, cantidadPisos, ambientesDetectados[], observaciones[], confianza }`.
+- Maneja 429/402 y errores de imagen.
 
-### 3. Vista de comparación de precios
+### 3. Storage
+- Reutiliza bucket `documentos` (ya existe, público). Carpeta `planos/`.
+- Para PDFs: usar primera página. Si el modelo no procesa PDF directo, convertir client-side a imagen con `pdfjs-dist` antes de subir, o pasar la URL del PDF (Gemini 2.5 Pro acepta PDF).
 
-Diálogo o panel que muestra para un producto seleccionado:
-- Tabla con columnas: Proveedor, Lista, Precio, Moneda, Fecha vigencia, Diferencia %
-- Resaltado del precio más bajo
-- Ordenable por precio
+### 4. Sin migración SQL
+No requiere tablas nuevas — el resultado fluye al cómputo existente.
 
-### 4. Hooks nuevos en useSupabaseData.ts
+## Archivos
+- **crear** `supabase/functions/ai-plano/index.ts`
+- **modificar** `src/components/presupuestos/ComputoIATab.tsx` — agregar tabs internos y modo plano
+- **opcional** `package.json` — agregar `pdfjs-dist` si convertimos PDF→imagen en cliente
 
-- `usePreciosProducto(productoId)` — precios de un producto con join a proveedores
-- `usePreciosProductos()` — todos los precios (para vista general)
-
-### Archivos a crear/modificar
-
-- **Migración SQL**: crear `precios_producto` + RLS
-- **`src/pages/Materiales.tsx`**: multi-proveedor en form, rango de precios en tarjeta, comparador
-- **`src/hooks/useSupabaseData.ts`**: hooks para `precios_producto`
-
-### Nota sobre `proveedor_id` existente en `productos`
-
-Se mantiene como "proveedor principal" para compatibilidad con Stock. Los precios detallados se gestionan desde la nueva tabla.
-
+## Notas
+- Modelo: `google/gemini-2.5-pro` (mejor visión + razonamiento para planos). Fallback a `google/gemini-3-flash-preview` si hay límites.
+- Mensaje claro al usuario: la estimación es referencial, debe validar con plano real acotado.
+- Mostrar nivel de confianza devuelto por la IA.
