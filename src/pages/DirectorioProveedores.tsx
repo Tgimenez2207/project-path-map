@@ -90,7 +90,8 @@ export default function DirectorioProveedores() {
     return base
       .filter(p => {
         const rating = calcRating(p.reseñas);
-        const matchBusqueda = !busqueda ||
+        // Skip text filter for IA tab — AI already searched by that term
+        const matchBusqueda = tabActiva === 'ia' || !busqueda ||
           p.razonSocial.toLowerCase().includes(busqueda.toLowerCase()) ||
           p.subrubro.toLowerCase().includes(busqueda.toLowerCase()) ||
           p.descripcion.toLowerCase().includes(busqueda.toLowerCase());
