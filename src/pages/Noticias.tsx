@@ -104,26 +104,35 @@ export default function Noticias() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const text = data.text || '';
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No se pudo parsear la respuesta');
+      // Support both new structured format and legacy text format
+      let parsedNoticias: any[] = [];
+      if (data?.noticias && Array.isArray(data.noticias)) {
+        // New Firecrawl + AI structured format
+        parsedNoticias = data.noticias;
+      } else if (data?.text) {
+        // Legacy text format fallback
+        const jsonMatch = data.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          parsedNoticias = parsed.noticias || [];
+        }
+      }
 
-      const parsed = JSON.parse(jsonMatch[0]);
       const guardadasTitulos: string[] = JSON.parse(localStorage.getItem('noticias-guardadas-titulos') || '[]');
 
-      const noticiasConId: Noticia[] = parsed.noticias.map((n: any) => {
-        const id = crypto.randomUUID();
-        return {
-          ...n,
-          id,
-          url: n.url || buildFallbackUrl(n.titulo, n.fuente),
-          guardada: guardadasTitulos.includes(n.titulo),
-          leida: false,
-        };
-      });
+      const noticiasConId: Noticia[] = parsedNoticias.map((n: any) => ({
+        ...n,
+        id: crypto.randomUUID(),
+        url: n.url || buildFallbackUrl(n.titulo, n.fuente),
+        guardada: guardadasTitulos.includes(n.titulo),
+        leida: false,
+      }));
 
       setNoticias(noticiasConId);
       setUltimaActualizacion(new Date());
+      if (!noticiasConId.length) {
+        toast.info('No se encontraron noticias. Probá con otro término.');
+      }
     } catch (e: any) {
       console.error('Error fetching noticias:', e);
       toast.error('Error al cargar noticias. Intentá de nuevo.');
