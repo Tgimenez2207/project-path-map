@@ -33,6 +33,7 @@ import {
   Zap,
   BarChart2,
   CheckSquare,
+  FileSignature,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const menuItems = [
   { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
   { title: 'Noticias del sector', url: '/noticias', icon: Newspaper, module: 'noticias' },
   { title: 'Mis tareas', url: '/mis-tareas', icon: CheckSquare, module: 'dashboard' },
+  { title: 'Contratos', url: '/contratos', icon: FileSignature, module: 'presupuestos' },
 ];
 
 const extraItems = [
