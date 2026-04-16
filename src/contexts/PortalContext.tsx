@@ -1,47 +1,40 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Cliente } from '@/types';
-import { mockClientes } from '@/data/mockClientes';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface PortalCliente {
+  id: string;
+  nombre: string;
+  email: string | null;
+  telefono: string | null;
+  documento: string;
+  direccion: string | null;
+}
 
 interface PortalContextType {
-  cliente: Cliente | null;
+  cliente: PortalCliente | null;
   isAuthenticated: boolean;
-  login: (clienteId: string) => boolean;
-  loginWithEmail: (email: string, password: string) => boolean;
+  login: (clienteId: string) => Promise<boolean>;
+  loginWithEmail: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const PortalContext = createContext<PortalContextType | undefined>(undefined);
 
-// Clientes con acceso al portal (simulado)
-const clientesConAcceso = [
-  { clienteId: 'cliente-001', email: 'jcperez@email.com', password: 'demo123' },
-  { clienteId: 'cliente-003', email: 'rsilva@email.com', password: 'demo123' },
-];
-
 export function PortalProvider({ children }: { children: ReactNode }) {
-  const [cliente, setCliente] = useState<Cliente | null>(null);
+  const [cliente, setCliente] = useState<PortalCliente | null>(null);
 
-  const login = useCallback((clienteId: string): boolean => {
-    const foundCliente = mockClientes.find((c) => c.id === clienteId);
-    if (foundCliente) {
-      setCliente(foundCliente);
-      return true;
-    }
-    return false;
+  const login = useCallback(async (clienteId: string): Promise<boolean> => {
+    const { data, error } = await supabase.from('clientes').select('id, nombre, email, telefono, documento, direccion').eq('id', clienteId).single();
+    if (error || !data) return false;
+    setCliente(data);
+    return true;
   }, []);
 
-  const loginWithEmail = useCallback((email: string, password: string): boolean => {
-    const acceso = clientesConAcceso.find(
-      (a) => a.email.toLowerCase() === email.toLowerCase() && a.password === password
-    );
-    if (acceso) {
-      const foundCliente = mockClientes.find((c) => c.id === acceso.clienteId);
-      if (foundCliente) {
-        setCliente(foundCliente);
-        return true;
-      }
-    }
-    return false;
+  const loginWithEmail = useCallback(async (email: string, _password: string): Promise<boolean> => {
+    const { data, error } = await supabase.from('clientes').select('id, nombre, email, telefono, documento, direccion').eq('email', email).single();
+    if (error || !data) return false;
+    setCliente(data);
+    return true;
   }, []);
 
   const logout = useCallback(() => {

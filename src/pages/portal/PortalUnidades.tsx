@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { usePortal } from '@/contexts/PortalContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,8 +11,7 @@ import {
   Car,
   Package,
 } from 'lucide-react';
-import { mockUnidades, mockCompradores, mockComplementos, mockPlanesPago, mockCuotas } from '@/data/mockUnidades';
-import { mockObras } from '@/data/mockObras';
+import { supabase } from '@/integrations/supabase/client';
 import { EstadoUnidad } from '@/types';
 
 const estadoConfig: Record<EstadoUnidad, { label: string; color: string }> = {
@@ -23,11 +23,44 @@ const estadoConfig: Record<EstadoUnidad, { label: string; color: string }> = {
 
 export default function PortalUnidades() {
   const { cliente } = usePortal();
+  const [unidades, setUnidades] = useState<any[]>([]);
+  const [compras, setCompras] = useState<any[]>([]);
+  const [obras, setObras] = useState<any[]>([]);
+  const [complementos, setComplementos] = useState<any[]>([]);
+  const [planes, setPlanes] = useState<any[]>([]);
+  const [cuotas, setCuotas] = useState<any[]>([]);
 
-  // Obtener unidades del cliente
-  const compras = mockCompradores.filter((c) => c.clienteId === cliente?.id);
-  const unidadesIds = compras.map((c) => c.unidadId);
-  const unidades = mockUnidades.filter((u) => unidadesIds.includes(u.id));
+  useEffect(() => {
+    if (!cliente) return;
+    const fetch = async () => {
+      const { data: comprasData } = await supabase.from('compradores').select('*').eq('cliente_id', cliente.id);
+      if (!comprasData || comprasData.length === 0) return;
+      setCompras(comprasData);
+      const uIds = comprasData.map(c => c.unidad_id);
+
+      const [unisRes, compsRes, planesRes] = await Promise.all([
+        supabase.from('unidades').select('*').in('id', uIds),
+        supabase.from('complementos').select('*').in('unidad_id', uIds),
+        supabase.from('planes_pago').select('*').in('unidad_id', uIds),
+      ]);
+      setUnidades(unisRes.data || []);
+      setComplementos(compsRes.data || []);
+      setPlanes(planesRes.data || []);
+
+      const obraIds = [...new Set((unisRes.data || []).map(u => u.obra_id))];
+      if (obraIds.length > 0) {
+        const { data: obrasData } = await supabase.from('obras').select('*').in('id', obraIds);
+        setObras(obrasData || []);
+      }
+
+      if (planesRes.data && planesRes.data.length > 0) {
+        const planIds = planesRes.data.map(p => p.id);
+        const { data: cuotasData } = await supabase.from('cuotas').select('*').in('plan_pago_id', planIds);
+        setCuotas(cuotasData || []);
+      }
+    };
+    fetch();
+  }, [cliente]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -50,18 +83,18 @@ export default function PortalUnidades() {
       ) : (
         <div className="space-y-6">
           {unidades.map((unidad) => {
-            const obra = mockObras.find((o) => o.id === unidad.obraId);
-            const compra = compras.find((c) => c.unidadId === unidad.id);
-            const complementos = mockComplementos.filter((c) => c.unidadId === unidad.id);
-            const planPago = mockPlanesPago.find((p) => p.unidadId === unidad.id);
-            const cuotas = planPago ? mockCuotas.filter((c) => c.planPagoId === planPago.id) : [];
+            const obra = obras.find((o) => o.id === unidad.obra_id);
+            const compra = compras.find((c) => c.unidad_id === unidad.id);
+            const uComps = complementos.filter((c) => c.unidad_id === unidad.id);
+            const planPago = planes.find((p) => p.unidad_id === unidad.id);
+            const uCuotas = planPago ? cuotas.filter((c) => c.plan_pago_id === planPago.id) : [];
             
-            const cuotasPagadas = cuotas.filter((c) => c.estado === 'aprobado');
-            const totalPagado = cuotasPagadas.reduce((acc, c) => acc + (c.montoPagado || 0), 0);
-            const porcentajePagado = planPago ? (totalPagado / planPago.montoTotal) * 100 : 0;
+            const cuotasPagadas = uCuotas.filter((c) => c.estado === 'aprobado');
+            const totalPagado = cuotasPagadas.reduce((acc, c) => acc + Number(c.monto_pagado || 0), 0);
+            const porcentajePagado = planPago ? (totalPagado / Number(planPago.monto_total)) * 100 : 0;
 
-            const totalComplementos = complementos.reduce((acc, c) => acc + c.precio, 0);
-            const totalUnidad = unidad.precioLista + totalComplementos;
+            const totalComplementos = uComps.reduce((acc, c) => acc + Number(c.precio), 0);
+            const totalUnidad = Number(unidad.precio_lista) + totalComplementos;
 
             return (
               <Card key={unidad.id}>
@@ -79,14 +112,13 @@ export default function PortalUnidades() {
                         </p>
                       </div>
                     </div>
-                    <Badge className={estadoConfig[unidad.estado].color}>
-                      {estadoConfig[unidad.estado].label}
+                    <Badge className={estadoConfig[unidad.estado as EstadoUnidad]?.color || ''}>
+                      {estadoConfig[unidad.estado as EstadoUnidad]?.label || unidad.estado}
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-6 md:grid-cols-2">
-                    {/* Info */}
                     <div className="space-y-4">
                       <h4 className="font-medium">Información de la Unidad</h4>
                       <div className="grid grid-cols-2 gap-4">
@@ -103,7 +135,7 @@ export default function PortalUnidades() {
                             Ubicación
                           </div>
                           <p className="font-semibold mt-1">
-                            {unidad.piso !== undefined ? `Piso ${unidad.piso}` : 'N/A'}
+                            {unidad.piso !== null ? `Piso ${unidad.piso}` : 'N/A'}
                             {unidad.torre && ` - Torre ${unidad.torre}`}
                           </p>
                         </div>
@@ -113,7 +145,7 @@ export default function PortalUnidades() {
                             Precio
                           </div>
                           <p className="font-semibold mt-1">
-                            USD {unidad.precioLista.toLocaleString()}
+                            USD {Number(unidad.precio_lista).toLocaleString()}
                           </p>
                         </div>
                         <div className="p-3 rounded-lg bg-muted/50">
@@ -122,12 +154,11 @@ export default function PortalUnidades() {
                         </div>
                       </div>
 
-                      {/* Complementos */}
-                      {complementos.length > 0 && (
+                      {uComps.length > 0 && (
                         <div>
                           <h4 className="font-medium mb-3">Complementos</h4>
                           <div className="space-y-2">
-                            {complementos.map((comp) => (
+                            {uComps.map((comp) => (
                               <div
                                 key={comp.id}
                                 className="flex items-center justify-between p-3 rounded-lg border"
@@ -143,7 +174,7 @@ export default function PortalUnidades() {
                                   </span>
                                 </div>
                                 <span className="font-medium">
-                                  USD {comp.precio.toLocaleString()}
+                                  USD {Number(comp.precio).toLocaleString()}
                                 </span>
                               </div>
                             ))}
@@ -152,7 +183,6 @@ export default function PortalUnidades() {
                       )}
                     </div>
 
-                    {/* Pagos */}
                     <div className="space-y-4">
                       <h4 className="font-medium">Estado de Pagos</h4>
                       
@@ -176,14 +206,14 @@ export default function PortalUnidades() {
                             <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
                               <p className="text-sm text-muted-foreground">Pendiente</p>
                               <p className="text-lg font-bold text-warning">
-                                USD {(planPago.montoTotal - totalPagado).toLocaleString()}
+                                USD {(Number(planPago.monto_total) - totalPagado).toLocaleString()}
                               </p>
                             </div>
                           </div>
 
                           <div className="text-sm text-muted-foreground">
-                            <p>Plan de {planPago.cantidadCuotas} cuotas</p>
-                            <p>{cuotasPagadas.length} cuotas pagadas de {cuotas.length}</p>
+                            <p>Plan de {planPago.cantidad_cuotas} cuotas</p>
+                            <p>{cuotasPagadas.length} cuotas pagadas de {uCuotas.length}</p>
                           </div>
                         </>
                       ) : (
