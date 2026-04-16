@@ -45,7 +45,7 @@ const menuItems = [
   { title: 'Finanzas', url: '/finanzas', icon: BarChart2, module: 'presupuestos' },
   { title: 'Tesorería', url: '/tesoreria', icon: Landmark, module: 'presupuestos' },
   { title: 'Obras', url: '/obras', icon: Building2, module: 'obras' },
-  { title: 'Presupuestos', url: '/presupuestos', icon: FileText, module: 'presupuestos' },
+  { title: 'Presupuestos y Cómputo', url: '/presupuestos', icon: FileText, module: 'presupuestos' },
   { title: 'Clientes', url: '/clientes', icon: Users, module: 'clientes' },
   { title: 'Proveedores', url: '/proveedores', icon: Truck, module: 'proveedores' },
   { title: 'Stock', url: '/stock', icon: Package, module: 'stock' },
@@ -53,7 +53,7 @@ const menuItems = [
   { title: 'Flota', url: '/flota', icon: Car, module: 'flota' },
   { title: 'Asistente IA', url: '/ia', icon: Sparkles, module: 'ia' },
   { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
-  { title: 'Cómputo IA', url: '/computo-ia', icon: Sparkles, module: 'presupuestos' },
+  
   { title: 'Noticias del sector', url: '/noticias', icon: Newspaper, module: 'noticias' },
   { title: 'Mis tareas', url: '/mis-tareas', icon: CheckSquare, module: 'dashboard' },
   { title: 'Contratos', url: '/contratos', icon: FileSignature, module: 'presupuestos' },
