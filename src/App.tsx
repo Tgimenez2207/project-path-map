@@ -30,6 +30,7 @@ import IAPanel from "@/pages/IAPanel";
 import SimuladorRinde from "@/pages/SimuladorRinde";
 import Noticias from "@/pages/Noticias";
 import CentroAyuda from "@/pages/CentroAyuda";
+import BriefingSemanal from "@/pages/BriefingSemanal";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";
@@ -63,6 +64,7 @@ const App = () => (
             {/* Protected Admin/Internal Routes */}
             <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
+              <Route path="briefing" element={<BriefingSemanal />} />
               <Route path="obras" element={<Obras />} />
               <Route path="obras/:obraId" element={<ObraDetalle />} />
               <Route path="obras/:obraId/cronograma" element={<GanttObra />} />

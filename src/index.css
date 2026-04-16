@@ -206,8 +206,9 @@
 }
 
 @media print {
-  [data-sidebar], .formulario-col, header, nav, .print\\:hidden { display: none !important; }
+  [data-sidebar], .formulario-col, header, nav, .print\\:hidden, .no-print, button { display: none !important; }
   .resultados-col { width: 100% !important; max-width: 100% !important; }
+  .main-content { margin: 0 !important; padding: 0 !important; }
   .print\\:block { display: block !important; }
-  body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  body { background: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
