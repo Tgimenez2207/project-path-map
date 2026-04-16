@@ -21,12 +21,24 @@ const estadoConfig: Record<string, { label: string; icon: typeof Clock; color: s
 };
 
 export default function PortalTerminaciones() {
-  const { cliente, unidades } = usePortal();
+  const { cliente } = usePortal();
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('todas');
   const [selectedUnidad, setSelectedUnidad] = useState<string>('');
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Fetch unidades for this client via compradores
+  const { data: unidades = [] } = useQuery({
+    queryKey: ['portal_unidades', cliente?.id],
+    queryFn: async () => {
+      if (!cliente?.id) return [];
+      const { data, error } = await supabase.from('compradores').select('unidad_id, unidades(id, codigo, tipologia)').eq('cliente_id', cliente.id);
+      if (error) throw error;
+      return (data || []).map((c: any) => c.unidades).filter(Boolean);
+    },
+    enabled: !!cliente?.id,
+  });
 
   // Fetch terminaciones catalog
   const { data: materiales = [], isLoading: loadingMat } = useQuery({
