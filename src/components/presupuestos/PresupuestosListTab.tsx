@@ -80,6 +80,19 @@ export default function Presupuestos() {
     p.descripcion.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleViewDetail = async (p: any) => {
+    setViewDialog(p);
+    setRubros([]);
+    setLoadingRubros(true);
+    const { data } = await supabase
+      .from('presupuesto_rubros')
+      .select('*')
+      .eq('presupuesto_id', p.id)
+      .order('incidencia', { ascending: false });
+    setRubros(data || []);
+    setLoadingRubros(false);
+  };
+
   const openCreate = () => {
     setEditingId(null);
     setForm(emptyForm);
