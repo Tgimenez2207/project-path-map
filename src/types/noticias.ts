@@ -12,7 +12,7 @@ export interface Noticia {
   resumen: string;
   categoria: CategoriaNoticia;
   fuente: string;
-  url?: string;
+  url: string;
   fecha: string;
   relevancia: 'alta' | 'media' | 'baja';
   guardada: boolean;
