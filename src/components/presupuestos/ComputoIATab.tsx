@@ -95,6 +95,15 @@ export default function ComputoIA() {
   const [convertForm, setConvertForm] = useState({ numero: '', obra_id: '', proveedor_id: '', descripcion: '' });
   const [converting, setConverting] = useState(false);
 
+  // Plano upload mode
+  const [modo, setModo] = useState<'manual' | 'plano'>('manual');
+  const [planoFile, setPlanoFile] = useState<File | null>(null);
+  const [planoUrl, setPlanoUrl] = useState<string | null>(null);
+  const [planoPreview, setPlanoPreview] = useState<string | null>(null);
+  const [analizando, setAnalizando] = useState(false);
+  const [analisisPlano, setAnalisisPlano] = useState<any>(null);
+  const [contextoPlano, setContextoPlano] = useState('');
+
   // History
   const { data: historial = [] } = useQuery({
     queryKey: ['computos'],
