@@ -86,6 +86,9 @@ export default function GanttObra() {
   const [isLoadingIA, setIsLoadingIA] = useState(false);
   const [analisisIA, setAnalisisIA] = useState<string | null>(null);
 
+  const ROW_H = 40;
+  const LEFT_COL = 280;
+
   // New nodo form state
   const [formNombre, setFormNombre] = useState('');
   const [formTipo, setFormTipo] = useState<TipoNodo>('tarea');
