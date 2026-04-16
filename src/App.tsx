@@ -37,12 +37,14 @@ import Contratos from "@/pages/Contratos";
 import Tesoreria from "@/pages/Tesoreria";
 import DirectorioProveedores from "@/pages/DirectorioProveedores";
 import ComputoIA from "@/pages/ComputoIA";
+import Materiales from "@/pages/Materiales";
 import PortalLogin from "@/pages/portal/PortalLogin";
 import PortalDashboard from "@/pages/portal/PortalDashboard";
 import PortalUnidades from "@/pages/portal/PortalUnidades";
 import PortalPagos from "@/pages/portal/PortalPagos";
 import PortalDocumentos from "@/pages/portal/PortalDocumentos";
 import PortalAvance from "@/pages/portal/PortalAvance";
+import PortalTerminaciones from "@/pages/portal/PortalTerminaciones";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -95,6 +97,7 @@ const App = () => (
               <Route path="contratos" element={<Contratos />} />
               <Route path="tesoreria" element={<Tesoreria />} />
               <Route path="computo-ia" element={<ComputoIA />} />
+              <Route path="materiales" element={<Materiales />} />
               <Route path="ayuda" element={<CentroAyuda />} />
             </Route>
 
@@ -107,6 +110,7 @@ const App = () => (
                 <Route path="pagos" element={<PortalPagos />} />
                 <Route path="documentos" element={<PortalDocumentos />} />
                 <Route path="avance" element={<PortalAvance />} />
+                <Route path="terminaciones" element={<PortalTerminaciones />} />
               </Route>
             </Route>
 
