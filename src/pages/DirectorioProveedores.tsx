@@ -162,7 +162,7 @@ export default function DirectorioProveedores() {
 
   const handleImportar = async (p: ProveedorDirectorio) => {
     try {
-      const { error } = await supabase.from('proveedores').insert({
+      const insertData: any = {
         razon_social: p.razonSocial,
         rubro: p.rubro,
         subrubro: p.subrubro || null,
@@ -175,7 +175,8 @@ export default function DirectorioProveedores() {
         web: p.web || null,
         activo: true,
         tipo: 'subcontratista',
-      });
+      };
+      const { error } = await supabase.from('proveedores').insert(insertData);
       if (error) throw error;
       setDirectorio(prev => prev.map(d => d.id === p.id ? { ...d, yaImportado: true } : d));
       setResultadosIA(prev => prev.map(d => d.id === p.id ? { ...d, yaImportado: true } : d));
