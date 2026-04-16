@@ -82,6 +82,93 @@ export type Database = {
         }
         Relationships: []
       }
+      cheques: {
+        Row: {
+          banco: string
+          created_at: string
+          cuenta_id: string | null
+          endosado_a: string | null
+          estado: string
+          fecha_deposito: string | null
+          fecha_emision: string
+          fecha_endoso: string | null
+          fecha_vencimiento: string
+          id: string
+          moneda: string
+          monto: number
+          motivo_rechazo: string | null
+          notas: string | null
+          numero: string
+          obra_id: string | null
+          obra_nombre: string | null
+          recibi_de: string | null
+          tipo: string
+          titular: string
+          updated_at: string
+        }
+        Insert: {
+          banco: string
+          created_at?: string
+          cuenta_id?: string | null
+          endosado_a?: string | null
+          estado?: string
+          fecha_deposito?: string | null
+          fecha_emision?: string
+          fecha_endoso?: string | null
+          fecha_vencimiento: string
+          id?: string
+          moneda?: string
+          monto?: number
+          motivo_rechazo?: string | null
+          notas?: string | null
+          numero: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          recibi_de?: string | null
+          tipo?: string
+          titular?: string
+          updated_at?: string
+        }
+        Update: {
+          banco?: string
+          created_at?: string
+          cuenta_id?: string | null
+          endosado_a?: string | null
+          estado?: string
+          fecha_deposito?: string | null
+          fecha_emision?: string
+          fecha_endoso?: string | null
+          fecha_vencimiento?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          motivo_rechazo?: string | null
+          notas?: string | null
+          numero?: string
+          obra_id?: string | null
+          obra_nombre?: string | null
+          recibi_de?: string | null
+          tipo?: string
+          titular?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cheques_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_tesoreria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cheques_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           created_at: string
@@ -299,6 +386,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      costos_fijos: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string
+          descripcion: string
+          es_recurrente: boolean
+          frecuencia: string | null
+          id: string
+          moneda: string
+          monto: number
+          notas: string | null
+          proximo_vencimiento: string | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          descripcion: string
+          es_recurrente?: boolean
+          frecuencia?: string | null
+          id?: string
+          moneda?: string
+          monto?: number
+          notas?: string | null
+          proximo_vencimiento?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          descripcion?: string
+          es_recurrente?: boolean
+          frecuencia?: string | null
+          id?: string
+          moneda?: string
+          monto?: number
+          notas?: string | null
+          proximo_vencimiento?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cuentas_tesoreria: {
+        Row: {
+          activa: boolean
+          banco: string | null
+          cbu: string | null
+          color: string
+          created_at: string
+          id: string
+          moneda: string
+          nombre: string
+          nro_cuenta: string | null
+          saldo_inicial: number
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          banco?: string | null
+          cbu?: string | null
+          color?: string
+          created_at?: string
+          id?: string
+          moneda?: string
+          nombre: string
+          nro_cuenta?: string | null
+          saldo_inicial?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          banco?: string | null
+          cbu?: string | null
+          color?: string
+          created_at?: string
+          id?: string
+          moneda?: string
+          nombre?: string
+          nro_cuenta?: string | null
+          saldo_inicial?: number
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       cuotas: {
         Row: {
@@ -649,6 +826,121 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimientos_tesoreria: {
+        Row: {
+          categoria: string
+          cheque_id: string | null
+          cliente_id: string | null
+          comprobante: string | null
+          conciliado: boolean
+          contrato_id: string | null
+          creado_por: string
+          created_at: string
+          cuenta_destino_id: string | null
+          cuenta_id: string | null
+          descripcion: string
+          fecha: string
+          id: string
+          moneda: string
+          monto: number
+          notas: string | null
+          obra_id: string | null
+          obra_nombre: string | null
+          proveedor_id: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string
+          cheque_id?: string | null
+          cliente_id?: string | null
+          comprobante?: string | null
+          conciliado?: boolean
+          contrato_id?: string | null
+          creado_por?: string
+          created_at?: string
+          cuenta_destino_id?: string | null
+          cuenta_id?: string | null
+          descripcion: string
+          fecha?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          notas?: string | null
+          obra_id?: string | null
+          obra_nombre?: string | null
+          proveedor_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          cheque_id?: string | null
+          cliente_id?: string | null
+          comprobante?: string | null
+          conciliado?: boolean
+          contrato_id?: string | null
+          creado_por?: string
+          created_at?: string
+          cuenta_destino_id?: string | null
+          cuenta_id?: string | null
+          descripcion?: string
+          fecha?: string
+          id?: string
+          moneda?: string
+          monto?: number
+          notas?: string | null
+          obra_id?: string | null
+          obra_nombre?: string | null
+          proveedor_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_tesoreria_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_tesoreria_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_tesoreria_cuenta_destino_id_fkey"
+            columns: ["cuenta_destino_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_tesoreria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_tesoreria_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas_tesoreria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_tesoreria_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_tesoreria_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
