@@ -116,7 +116,7 @@ export default function Noticias() {
         return {
           ...n,
           id,
-          url: n.url || buildSearchUrl(n.titulo, n.fuente),
+          url: n.url || buildFallbackUrl(n.titulo, n.fuente),
           guardada: guardadasTitulos.includes(n.titulo),
           leida: false,
         };
