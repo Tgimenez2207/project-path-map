@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useMemo, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -7,29 +7,62 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
   FileSignature, Plus, Search, Filter, Building2, Calendar,
-  Clock, CheckCircle, AlertTriangle, DollarSign, FileText,
-  Eye, Download, Copy, ChevronRight, Users, Milestone,
+  Clock, CheckCircle, DollarSign, FileText,
+  Copy, ChevronRight, Users, Milestone,
 } from 'lucide-react';
-import { mockContratos, mockPlantillas } from '@/data/mockContratos';
-import type {
-  Contrato, TipoContrato, EstadoContrato, PlantillaContrato,
-} from '@/types/contratos';
+import { supabase } from '@/integrations/supabase/client';
+import type { TipoContrato, EstadoContrato, PlantillaContrato, HitoContractual, Parte } from '@/types/contratos';
 
-const tipoLabels: Record<TipoContrato, string> = {
+// DB row type
+interface ContratoRow {
+  id: string;
+  numero: string;
+  tipo: string;
+  titulo: string;
+  estado: string;
+  parte_a: any;
+  parte_b: any;
+  obra_id: string | null;
+  obra_nombre: string | null;
+  fecha_creacion: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  fecha_firma: string | null;
+  monto_total: number;
+  moneda: string;
+  forma_pago: string;
+  hitos: any;
+  cuerpo: string;
+  plantilla_id: string | null;
+  adjuntos: string[];
+  notas: string;
+  creado_por: string;
+  version: number;
+}
+
+interface PlantillaRow {
+  id: string;
+  nombre: string;
+  tipo: string;
+  descripcion: string;
+  cuerpo: string;
+  variables: string[];
+}
+
+const tipoLabels: Record<string, string> = {
   compraventa: 'Compraventa', locacion_obra: 'Locación de obra',
   subcontrato: 'Subcontrato', provision: 'Provisión',
   honorarios: 'Honorarios', alquiler: 'Alquiler', otro: 'Otro',
 };
 
-const estadoConfig: Record<EstadoContrato, { label: string; color: string }> = {
+const estadoConfig: Record<string, { label: string; color: string }> = {
   borrador: { label: 'Borrador', color: 'bg-slate-100 text-slate-700' },
   revision: { label: 'En revisión', color: 'bg-amber-100 text-amber-700' },
   pendiente_firma: { label: 'Pendiente firma', color: 'bg-orange-100 text-orange-700' },
@@ -39,16 +72,33 @@ const estadoConfig: Record<EstadoContrato, { label: string; color: string }> = {
   rescindido: { label: 'Rescindido', color: 'bg-red-100 text-red-700' },
 };
 
+const estadoKeys = ['borrador','revision','pendiente_firma','firmado','en_ejecucion','finalizado','rescindido'];
+
 export default function Contratos() {
-  const [contratos, setContratos] = useState<Contrato[]>(mockContratos);
-  const [filtroTipo, setFiltroTipo] = useState<TipoContrato | 'todos'>('todos');
-  const [filtroEstado, setFiltroEstado] = useState<EstadoContrato | 'todos'>('todos');
+  const [contratos, setContratos] = useState<ContratoRow[]>([]);
+  const [plantillas, setPlantillas] = useState<PlantillaRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filtroTipo, setFiltroTipo] = useState<string>('todos');
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
   const [busqueda, setBusqueda] = useState('');
-  const [contratoSeleccionado, setContratoSeleccionado] = useState<Contrato | null>(null);
+  const [contratoSeleccionado, setContratoSeleccionado] = useState<ContratoRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [dialogNuevo, setDialogNuevo] = useState(false);
-  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState<PlantillaContrato | null>(null);
+  const [plantillaSeleccionada, setPlantillaSeleccionada] = useState<PlantillaRow | null>(null);
   const [dialogPlantilla, setDialogPlantilla] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const [{ data: ctosData }, { data: tplData }] = await Promise.all([
+      supabase.from('contratos').select('*').order('created_at', { ascending: false }),
+      supabase.from('plantillas_contrato').select('*'),
+    ]);
+    if (ctosData) setContratos(ctosData as unknown as ContratoRow[]);
+    if (tplData) setPlantillas(tplData as unknown as PlantillaRow[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, []);
 
   const contratosFiltrados = useMemo(() => {
     return contratos.filter(c => {
@@ -56,10 +106,11 @@ export default function Contratos() {
       if (filtroEstado !== 'todos' && c.estado !== filtroEstado) return false;
       if (busqueda) {
         const q = busqueda.toLowerCase();
+        const parteB = c.parte_b as any;
         return c.titulo.toLowerCase().includes(q) ||
           c.numero.toLowerCase().includes(q) ||
-          c.parteB.nombre.toLowerCase().includes(q) ||
-          c.obraNombre?.toLowerCase().includes(q);
+          (parteB?.nombre || '').toLowerCase().includes(q) ||
+          (c.obra_nombre || '').toLowerCase().includes(q);
       }
       return true;
     });
@@ -67,104 +118,89 @@ export default function Contratos() {
 
   const stats = useMemo(() => {
     const activos = contratos.filter(c => ['firmado', 'en_ejecucion'].includes(c.estado));
-    const montoActivo = activos.reduce((a, c) => a + c.montoTotal, 0);
+    const montoActivo = activos.reduce((a, c) => a + Number(c.monto_total), 0);
     const pendientesFirma = contratos.filter(c => c.estado === 'pendiente_firma').length;
-    const hitosPendientes = contratos.flatMap(c => c.hitos).filter(h => !h.cumplido).length;
-    return {
-      total: contratos.length,
-      activos: activos.length,
-      montoActivo,
-      pendientesFirma,
-      hitosPendientes,
-    };
+    const hitosPendientes = contratos.flatMap(c => (c.hitos as HitoContractual[] || [])).filter(h => !h.cumplido).length;
+    return { total: contratos.length, activos: activos.length, montoActivo, pendientesFirma, hitosPendientes };
   }, [contratos]);
 
-  const cambiarEstado = (id: string, estado: EstadoContrato) => {
-    setContratos(prev => prev.map(c =>
-      c.id === id ? {
-        ...c,
-        estado,
-        fechaFirma: estado === 'firmado' ? new Date().toISOString().split('T')[0] : c.fechaFirma,
-      } : c
-    ));
-    if (contratoSeleccionado?.id === id) {
-      setContratoSeleccionado(prev => prev ? { ...prev, estado } : null);
-    }
-    toast.success(`Estado actualizado a "${estadoConfig[estado].label}"`);
+  const cambiarEstado = async (id: string, estado: string) => {
+    const updates: any = { estado };
+    if (estado === 'firmado') updates.fecha_firma = new Date().toISOString().split('T')[0];
+    const { error } = await supabase.from('contratos').update(updates).eq('id', id);
+    if (error) { toast.error('Error al actualizar estado'); return; }
+    setContratos(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    if (contratoSeleccionado?.id === id) setContratoSeleccionado(prev => prev ? { ...prev, ...updates } : null);
+    toast.success(`Estado actualizado a "${estadoConfig[estado]?.label}"`);
   };
 
-  const toggleHito = (contratoId: string, hitoId: string) => {
-    setContratos(prev => prev.map(c =>
-      c.id === contratoId ? {
-        ...c,
-        hitos: c.hitos.map(h =>
-          h.id === hitoId ? {
-            ...h,
-            cumplido: !h.cumplido,
-            fechaReal: !h.cumplido ? new Date().toISOString().split('T')[0] : undefined,
-          } : h
-        ),
-      } : c
-    ));
-    if (contratoSeleccionado?.id === contratoId) {
-      setContratoSeleccionado(prev => prev ? {
-        ...prev,
-        hitos: prev.hitos.map(h =>
-          h.id === hitoId ? {
-            ...h,
-            cumplido: !h.cumplido,
-            fechaReal: !h.cumplido ? new Date().toISOString().split('T')[0] : undefined,
-          } : h
-        ),
-      } : null);
-    }
+  const toggleHito = async (contratoId: string, hitoId: string) => {
+    const contrato = contratos.find(c => c.id === contratoId);
+    if (!contrato) return;
+    const hitos = (contrato.hitos as HitoContractual[]).map(h =>
+      h.id === hitoId ? { ...h, cumplido: !h.cumplido, fechaReal: !h.cumplido ? new Date().toISOString().split('T')[0] : undefined } : h
+    );
+    const { error } = await supabase.from('contratos').update({ hitos } as any).eq('id', contratoId);
+    if (error) { toast.error('Error al actualizar hito'); return; }
+    setContratos(prev => prev.map(c => c.id === contratoId ? { ...c, hitos } : c));
+    if (contratoSeleccionado?.id === contratoId) setContratoSeleccionado(prev => prev ? { ...prev, hitos } : null);
   };
 
-  const abrirDetalle = (contrato: Contrato) => {
+  const abrirDetalle = (contrato: ContratoRow) => {
     setContratoSeleccionado(contrato);
     setSheetOpen(true);
   };
 
-  const usarPlantilla = (plantilla: PlantillaContrato) => {
-    setPlantillaSeleccionada(plantilla);
-    setDialogNuevo(false);
-    setDialogPlantilla(true);
-  };
-
-  const crearDesdeModelo = () => {
-    if (!plantillaSeleccionada) return;
-    const nuevo: Contrato = {
-      id: `cto-${Date.now()}`,
-      numero: `CTO-2026-${String(contratos.length + 1).padStart(3, '0')}`,
-      tipo: plantillaSeleccionada.tipo,
-      titulo: `Nuevo ${tipoLabels[plantillaSeleccionada.tipo]}`,
-      estado: 'borrador',
-      parteA: { tipo: 'otro', nombre: 'NATO OBRAS SRL', cuit: '30-71234567-8' },
-      parteB: { tipo: 'cliente', nombre: '' },
-      fechaCreacion: new Date().toISOString().split('T')[0],
-      fechaInicio: new Date().toISOString().split('T')[0],
-      montoTotal: 0,
-      moneda: 'USD',
-      formaPago: '',
-      hitos: [],
-      cuerpo: plantillaSeleccionada.cuerpo,
-      plantillaId: plantillaSeleccionada.id,
+  const crearContrato = async (tipo: string, cuerpo: string, plantillaId?: string) => {
+    const numero = `CTO-2026-${String(contratos.length + 1).padStart(3, '0')}`;
+    const nuevo = {
+      numero,
+      tipo: tipo as any,
+      titulo: `Nuevo ${tipoLabels[tipo] || 'Contrato'}`,
+      estado: 'borrador' as any,
+      parte_a: { tipo: 'otro', nombre: 'NATO OBRAS SRL', cuit: '30-71234567-8' },
+      parte_b: { tipo: 'cliente', nombre: '' },
+      fecha_creacion: new Date().toISOString().split('T')[0],
+      fecha_inicio: new Date().toISOString().split('T')[0],
+      monto_total: 0,
+      moneda: 'USD' as any,
+      forma_pago: '',
+      hitos: [] as any,
+      cuerpo,
+      plantilla_id: plantillaId || null,
       adjuntos: [],
       notas: '',
-      creadoPor: 'Tomás',
+      creado_por: 'Tomás',
       version: 1,
     };
-    setContratos(prev => [nuevo, ...prev]);
+    const { data, error } = await supabase.from('contratos').insert(nuevo).select().single();
+    if (error) { toast.error('Error al crear contrato'); return; }
+    const row = data as unknown as ContratoRow;
+    setContratos(prev => [row, ...prev]);
+    setDialogNuevo(false);
     setDialogPlantilla(false);
     setPlantillaSeleccionada(null);
-    abrirDetalle(nuevo);
-    toast.success('Contrato creado desde plantilla');
+    abrirDetalle(row);
+    toast.success('Contrato creado');
   };
 
-  const hitosProgress = (contrato: Contrato) => {
-    if (contrato.hitos.length === 0) return 0;
-    return (contrato.hitos.filter(h => h.cumplido).length / contrato.hitos.length) * 100;
+  const hitosProgress = (c: ContratoRow) => {
+    const h = c.hitos as HitoContractual[] || [];
+    if (h.length === 0) return 0;
+    return (h.filter(x => x.cumplido).length / h.length) * 100;
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+        </div>
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -181,29 +217,20 @@ export default function Contratos() {
         </div>
         <Dialog open={dialogNuevo} onOpenChange={setDialogNuevo}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1">
-              <Plus className="h-4 w-4" /> Nuevo contrato
-            </Button>
+            <Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Nuevo contrato</Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Elegir plantilla</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Elegir plantilla</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              {mockPlantillas.map(p => (
-                <Card
-                  key={p.id}
-                  className="cursor-pointer hover:shadow-md transition-shadow rounded-xl"
-                  onClick={() => usarPlantilla(p)}
-                >
+              {plantillas.map(p => (
+                <Card key={p.id} className="cursor-pointer hover:shadow-md transition-shadow rounded-xl"
+                  onClick={() => { setPlantillaSeleccionada(p); setDialogNuevo(false); setDialogPlantilla(true); }}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h4 className="font-medium text-sm">{p.nombre}</h4>
                         <p className="text-xs text-muted-foreground mt-0.5">{p.descripcion}</p>
-                        <Badge variant="secondary" className="text-[10px] mt-2">
-                          {tipoLabels[p.tipo]}
-                        </Badge>
+                        <Badge variant="secondary" className="text-[10px] mt-2">{tipoLabels[p.tipo]}</Badge>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
                     </div>
@@ -211,38 +238,8 @@ export default function Contratos() {
                 </Card>
               ))}
               <Separator />
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  const nuevo: Contrato = {
-                    id: `cto-${Date.now()}`,
-                    numero: `CTO-2026-${String(contratos.length + 1).padStart(3, '0')}`,
-                    tipo: 'otro',
-                    titulo: 'Contrato nuevo',
-                    estado: 'borrador',
-                    parteA: { tipo: 'otro', nombre: 'NATO OBRAS SRL', cuit: '30-71234567-8' },
-                    parteB: { tipo: 'cliente', nombre: '' },
-                    fechaCreacion: new Date().toISOString().split('T')[0],
-                    fechaInicio: new Date().toISOString().split('T')[0],
-                    montoTotal: 0,
-                    moneda: 'USD',
-                    formaPago: '',
-                    hitos: [],
-                    cuerpo: '',
-                    adjuntos: [],
-                    notas: '',
-                    creadoPor: 'Tomás',
-                    version: 1,
-                  };
-                  setContratos(prev => [nuevo, ...prev]);
-                  setDialogNuevo(false);
-                  abrirDetalle(nuevo);
-                  toast.success('Contrato en blanco creado');
-                }}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Contrato en blanco
+              <Button variant="outline" className="w-full" onClick={() => crearContrato('otro', '')}>
+                <FileText className="h-4 w-4 mr-2" /> Contrato en blanco
               </Button>
             </div>
           </DialogContent>
@@ -252,26 +249,19 @@ export default function Contratos() {
       {/* Confirm template dialog */}
       <Dialog open={dialogPlantilla} onOpenChange={setDialogPlantilla}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Crear desde plantilla</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Crear desde plantilla</DialogTitle></DialogHeader>
           {plantillaSeleccionada && (
             <div className="space-y-4">
-              <p className="text-sm">
-                Se creará un contrato de tipo <strong>{tipoLabels[plantillaSeleccionada.tipo]}</strong> con
-                el modelo "{plantillaSeleccionada.nombre}".
-              </p>
+              <p className="text-sm">Se creará un contrato de tipo <strong>{tipoLabels[plantillaSeleccionada.tipo]}</strong> con el modelo "{plantillaSeleccionada.nombre}".</p>
               <div>
                 <p className="text-xs text-muted-foreground mb-2">Variables a completar:</p>
                 <div className="flex flex-wrap gap-1">
                   {plantillaSeleccionada.variables.map(v => (
-                    <Badge key={v} variant="secondary" className="text-[10px]">
-                      {v.replace(/_/g, ' ')}
-                    </Badge>
+                    <Badge key={v} variant="secondary" className="text-[10px]">{v.replace(/_/g, ' ')}</Badge>
                   ))}
                 </div>
               </div>
-              <Button onClick={crearDesdeModelo} className="w-full">
+              <Button onClick={() => crearContrato(plantillaSeleccionada.tipo, plantillaSeleccionada.cuerpo, plantillaSeleccionada.id)} className="w-full">
                 Crear contrato
               </Button>
             </div>
@@ -303,96 +293,64 @@ export default function Contratos() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar contrato..."
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-            className="pl-8 h-9"
-          />
+          <Input placeholder="Buscar contrato..." value={busqueda} onChange={e => setBusqueda(e.target.value)} className="pl-8 h-9" />
         </div>
-        <Select value={filtroTipo} onValueChange={v => setFiltroTipo(v as any)}>
-          <SelectTrigger className="w-[150px] h-9">
-            <Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Tipo" />
-          </SelectTrigger>
+        <Select value={filtroTipo} onValueChange={v => setFiltroTipo(v)}>
+          <SelectTrigger className="w-[150px] h-9"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Tipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los tipos</SelectItem>
-            {Object.entries(tipoLabels).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
+            {Object.entries(tipoLabels).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filtroEstado} onValueChange={v => setFiltroEstado(v as any)}>
-          <SelectTrigger className="w-[160px] h-9">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
+        <Select value={filtroEstado} onValueChange={v => setFiltroEstado(v)}>
+          <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos los estados</SelectItem>
-            {Object.entries(estadoConfig).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v.label}</SelectItem>
-            ))}
+            {Object.entries(estadoConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Contracts list */}
+      {/* List */}
       <div className="space-y-3">
-        {contratosFiltrados.map(contrato => (
-          <Card
-            key={contrato.id}
-            className="rounded-xl cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => abrirDetalle(contrato)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-xs font-mono text-muted-foreground">{contrato.numero}</span>
-                    <Badge className={`text-[10px] ${estadoConfig[contrato.estado].color}`}>
-                      {estadoConfig[contrato.estado].label}
-                    </Badge>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {tipoLabels[contrato.tipo]}
-                    </Badge>
-                  </div>
-                  <h3 className="font-medium text-sm truncate">{contrato.titulo}</h3>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {contrato.parteB.nombre || 'Sin definir'}
-                    </span>
-                    {contrato.obraNombre && (
-                      <span className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3" />
-                        {contrato.obraNombre}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(contrato.fechaCreacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}
-                    </span>
-                  </div>
-                  {contrato.hitos.length > 0 && (
-                    <div className="mt-2">
-                      <Progress value={hitosProgress(contrato)} className="h-1.5" />
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {contrato.hitos.filter(h => h.cumplido).length}/{contrato.hitos.length} hitos cumplidos
-                      </p>
+        {contratosFiltrados.map(contrato => {
+          const parteB = contrato.parte_b as Parte;
+          const hitos = contrato.hitos as HitoContractual[] || [];
+          return (
+            <Card key={contrato.id} className="rounded-xl cursor-pointer hover:shadow-md transition-shadow" onClick={() => abrirDetalle(contrato)}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-xs font-mono text-muted-foreground">{contrato.numero}</span>
+                      <Badge className={`text-[10px] ${estadoConfig[contrato.estado]?.color}`}>{estadoConfig[contrato.estado]?.label}</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{tipoLabels[contrato.tipo]}</Badge>
                     </div>
-                  )}
+                    <h3 className="font-medium text-sm truncate">{contrato.titulo}</h3>
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Users className="h-3 w-3" />{parteB?.nombre || 'Sin definir'}</span>
+                      {contrato.obra_nombre && <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{contrato.obra_nombre}</span>}
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(contrato.fecha_creacion).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
+                    </div>
+                    {hitos.length > 0 && (
+                      <div className="mt-2">
+                        <Progress value={hitosProgress(contrato)} className="h-1.5" />
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{hitos.filter(h => h.cumplido).length}/{hitos.length} hitos cumplidos</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-bold text-sm">{contrato.moneda} {Number(contrato.monto_total).toLocaleString('es-AR')}</p>
+                    <p className="text-[10px] text-muted-foreground">{contrato.forma_pago}</p>
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="font-bold text-sm">
-                    {contrato.moneda} {contrato.montoTotal.toLocaleString('es-AR')}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{contrato.formaPago}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
         {contratosFiltrados.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            No hay contratos con estos filtros
+            {contratos.length === 0 ? 'No hay contratos todavía. Creá el primero.' : 'No hay contratos con estos filtros'}
           </div>
         )}
       </div>
@@ -400,198 +358,113 @@ export default function Contratos() {
       {/* Detail Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-          {contratoSeleccionado && (
-            <div className="space-y-6 pt-4">
-              <SheetHeader>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-mono">{contratoSeleccionado.numero}</span>
-                  <span>· v{contratoSeleccionado.version}</span>
+          {contratoSeleccionado && (() => {
+            const c = contratoSeleccionado;
+            const parteA = c.parte_a as Parte;
+            const parteB = c.parte_b as Parte;
+            const hitos = c.hitos as HitoContractual[] || [];
+            return (
+              <div className="space-y-6 pt-4">
+                <SheetHeader>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono">{c.numero}</span><span>· v{c.version}</span>
+                  </div>
+                  <SheetTitle className="text-left text-lg leading-tight">{c.titulo}</SheetTitle>
+                </SheetHeader>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge className={estadoConfig[c.estado]?.color}>{estadoConfig[c.estado]?.label}</Badge>
+                  <Badge variant="secondary">{tipoLabels[c.tipo]}</Badge>
+                  {c.obra_nombre && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Building2 className="h-3 w-3 mr-1" />{c.obra_nombre}</Badge>}
                 </div>
-                <SheetTitle className="text-left text-lg leading-tight">
-                  {contratoSeleccionado.titulo}
-                </SheetTitle>
-              </SheetHeader>
 
-              {/* Badges */}
-              <div className="flex flex-wrap gap-2">
-                <Badge className={estadoConfig[contratoSeleccionado.estado].color}>
-                  {estadoConfig[contratoSeleccionado.estado].label}
-                </Badge>
-                <Badge variant="secondary">{tipoLabels[contratoSeleccionado.tipo]}</Badge>
-                {contratoSeleccionado.obraNombre && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    <Building2 className="h-3 w-3 mr-1" />{contratoSeleccionado.obraNombre}
-                  </Badge>
-                )}
-              </div>
+                <Tabs defaultValue="general">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="general" className="flex-1 text-xs">General</TabsTrigger>
+                    <TabsTrigger value="hitos" className="flex-1 text-xs">Hitos</TabsTrigger>
+                    <TabsTrigger value="cuerpo" className="flex-1 text-xs">Texto</TabsTrigger>
+                  </TabsList>
 
-              <Tabs defaultValue="general">
-                <TabsList className="w-full">
-                  <TabsTrigger value="general" className="flex-1 text-xs">General</TabsTrigger>
-                  <TabsTrigger value="hitos" className="flex-1 text-xs">Hitos</TabsTrigger>
-                  <TabsTrigger value="cuerpo" className="flex-1 text-xs">Texto</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="general" className="space-y-4 mt-4">
-                  {/* Partes */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <Card className="rounded-xl">
-                      <CardContent className="p-3">
+                  <TabsContent value="general" className="space-y-4 mt-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Card className="rounded-xl"><CardContent className="p-3">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Parte A</p>
-                        <p className="text-sm font-medium">{contratoSeleccionado.parteA.nombre}</p>
-                        {contratoSeleccionado.parteA.cuit && (
-                          <p className="text-xs text-muted-foreground">CUIT: {contratoSeleccionado.parteA.cuit}</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                    <Card className="rounded-xl">
-                      <CardContent className="p-3">
+                        <p className="text-sm font-medium">{parteA?.nombre}</p>
+                        {parteA?.cuit && <p className="text-xs text-muted-foreground">CUIT: {parteA.cuit}</p>}
+                      </CardContent></Card>
+                      <Card className="rounded-xl"><CardContent className="p-3">
                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Parte B</p>
-                        <p className="text-sm font-medium">{contratoSeleccionado.parteB.nombre || 'Sin definir'}</p>
-                        {contratoSeleccionado.parteB.cuit && (
-                          <p className="text-xs text-muted-foreground">CUIT: {contratoSeleccionado.parteB.cuit}</p>
-                        )}
-                        {contratoSeleccionado.parteB.dni && (
-                          <p className="text-xs text-muted-foreground">DNI: {contratoSeleccionado.parteB.dni}</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
+                        <p className="text-sm font-medium">{parteB?.nombre || 'Sin definir'}</p>
+                        {parteB?.cuit && <p className="text-xs text-muted-foreground">CUIT: {parteB.cuit}</p>}
+                        {parteB?.dni && <p className="text-xs text-muted-foreground">DNI: {parteB.dni}</p>}
+                      </CardContent></Card>
+                    </div>
 
-                  {/* Info */}
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Monto total</p>
-                      <p className="font-semibold">
-                        {contratoSeleccionado.moneda} {contratoSeleccionado.montoTotal.toLocaleString('es-AR')}
-                      </p>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div><p className="text-muted-foreground text-xs">Monto total</p><p className="font-semibold">{c.moneda} {Number(c.monto_total).toLocaleString('es-AR')}</p></div>
+                      <div><p className="text-muted-foreground text-xs">Forma de pago</p><p>{c.forma_pago || '—'}</p></div>
+                      <div><p className="text-muted-foreground text-xs">Fecha inicio</p><p>{new Date(c.fecha_inicio).toLocaleDateString('es-AR')}</p></div>
+                      {c.fecha_fin && <div><p className="text-muted-foreground text-xs">Fecha fin</p><p>{new Date(c.fecha_fin).toLocaleDateString('es-AR')}</p></div>}
+                      {c.fecha_firma && <div><p className="text-muted-foreground text-xs">Firmado el</p><p>{new Date(c.fecha_firma).toLocaleDateString('es-AR')}</p></div>}
+                      <div><p className="text-muted-foreground text-xs">Creado por</p><p>{c.creado_por}</p></div>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Forma de pago</p>
-                      <p>{contratoSeleccionado.formaPago || '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Fecha inicio</p>
-                      <p>{new Date(contratoSeleccionado.fechaInicio).toLocaleDateString('es-AR')}</p>
-                    </div>
-                    {contratoSeleccionado.fechaFin && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Fecha fin</p>
-                        <p>{new Date(contratoSeleccionado.fechaFin).toLocaleDateString('es-AR')}</p>
-                      </div>
-                    )}
-                    {contratoSeleccionado.fechaFirma && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Firmado el</p>
-                        <p>{new Date(contratoSeleccionado.fechaFirma).toLocaleDateString('es-AR')}</p>
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-muted-foreground text-xs">Creado por</p>
-                      <p>{contratoSeleccionado.creadoPor}</p>
-                    </div>
-                  </div>
 
-                  {contratoSeleccionado.notas && (
+                    {c.notas && <div><p className="text-xs text-muted-foreground mb-1">Notas</p><p className="text-sm bg-muted/50 rounded-lg p-3">{c.notas}</p></div>}
+
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Notas</p>
-                      <p className="text-sm bg-muted/50 rounded-lg p-3">{contratoSeleccionado.notas}</p>
-                    </div>
-                  )}
-
-                  {/* Change state */}
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-2">Cambiar estado</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(Object.keys(estadoConfig) as EstadoContrato[]).map(estado => (
-                        <Button
-                          key={estado}
-                          size="sm"
-                          variant={contratoSeleccionado.estado === estado ? 'default' : 'outline'}
-                          onClick={() => cambiarEstado(contratoSeleccionado.id, estado)}
-                          className="text-xs"
-                        >
-                          {estadoConfig[estado].label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="hitos" className="space-y-4 mt-4">
-                  {contratoSeleccionado.hitos.length > 0 ? (
-                    <>
-                      <Progress value={hitosProgress(contratoSeleccionado)} className="h-2" />
-                      <p className="text-xs text-muted-foreground">
-                        {contratoSeleccionado.hitos.filter(h => h.cumplido).length} de {contratoSeleccionado.hitos.length} hitos cumplidos
-                      </p>
-                      <div className="space-y-3">
-                        {contratoSeleccionado.hitos.map(hito => (
-                          <div
-                            key={hito.id}
-                            className={`flex items-start gap-3 p-3 rounded-xl border ${
-                              hito.cumplido ? 'bg-emerald-50/50 border-emerald-200' : 'border-border'
-                            }`}
-                          >
-                            <Checkbox
-                              checked={hito.cumplido}
-                              onCheckedChange={() => toggleHito(contratoSeleccionado.id, hito.id)}
-                              className="mt-0.5"
-                            />
-                            <div className="flex-1">
-                              <p className={`text-sm font-medium ${hito.cumplido ? 'line-through text-muted-foreground' : ''}`}>
-                                {hito.descripcion}
-                              </p>
-                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {new Date(hito.fechaEstimada).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                                </span>
-                                {hito.monto && (
-                                  <span className="flex items-center gap-1">
-                                    <DollarSign className="h-3 w-3" />
-                                    USD {hito.monto.toLocaleString('es-AR')}
-                                  </span>
-                                )}
-                                {hito.fechaReal && (
-                                  <span className="text-emerald-600 flex items-center gap-1">
-                                    <CheckCircle className="h-3 w-3" />
-                                    {new Date(hito.fechaReal).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
+                      <p className="text-xs text-muted-foreground mb-2">Cambiar estado</p>
+                      <div className="flex flex-wrap gap-2">
+                        {estadoKeys.map(estado => (
+                          <Button key={estado} size="sm" variant={c.estado === estado ? 'default' : 'outline'}
+                            onClick={() => cambiarEstado(c.id, estado)} className="text-xs">
+                            {estadoConfig[estado].label}
+                          </Button>
                         ))}
                       </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground text-sm">
-                      Este contrato no tiene hitos definidos
                     </div>
-                  )}
-                </TabsContent>
+                  </TabsContent>
 
-                <TabsContent value="cuerpo" className="mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs text-muted-foreground">Texto del contrato</p>
-                    <Button
-                      size="sm" variant="ghost"
-                      onClick={() => {
-                        navigator.clipboard.writeText(contratoSeleccionado.cuerpo);
-                        toast.success('Texto copiado al portapapeles');
-                      }}
-                    >
-                      <Copy className="h-3 w-3 mr-1" /> Copiar
-                    </Button>
-                  </div>
-                  <div className="bg-muted/30 rounded-xl p-4 text-sm whitespace-pre-wrap font-mono leading-relaxed max-h-[60vh] overflow-y-auto border">
-                    {contratoSeleccionado.cuerpo}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
+                  <TabsContent value="hitos" className="space-y-4 mt-4">
+                    {hitos.length > 0 ? (
+                      <>
+                        <Progress value={hitosProgress(c)} className="h-2" />
+                        <p className="text-xs text-muted-foreground">{hitos.filter(h => h.cumplido).length} de {hitos.length} hitos cumplidos</p>
+                        <div className="space-y-3">
+                          {hitos.map(hito => (
+                            <div key={hito.id} className={`flex items-start gap-3 p-3 rounded-xl border ${hito.cumplido ? 'bg-emerald-50/50 border-emerald-200' : 'border-border'}`}>
+                              <Checkbox checked={hito.cumplido} onCheckedChange={() => toggleHito(c.id, hito.id)} className="mt-0.5" />
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${hito.cumplido ? 'line-through text-muted-foreground' : ''}`}>{hito.descripcion}</p>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(hito.fechaEstimada).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>
+                                  {hito.monto && <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />USD {hito.monto.toLocaleString('es-AR')}</span>}
+                                  {hito.fechaReal && <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="h-3 w-3" />{new Date(hito.fechaReal).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground text-sm">Este contrato no tiene hitos definidos</div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="cuerpo" className="mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-muted-foreground">Texto del contrato</p>
+                      <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(c.cuerpo); toast.success('Texto copiado'); }}>
+                        <Copy className="h-3 w-3 mr-1" /> Copiar
+                      </Button>
+                    </div>
+                    <div className="bg-muted/30 rounded-xl p-4 text-sm whitespace-pre-wrap font-mono leading-relaxed max-h-[60vh] overflow-y-auto border">
+                      {c.cuerpo || 'Sin contenido'}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            );
+          })()}
         </SheetContent>
       </Sheet>
     </div>
