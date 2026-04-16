@@ -9,11 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useObras, useProveedores } from '@/hooks/useSupabaseData';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import {
-  Calculator, Sparkles, Building2, MapPin, Layers, PaintBucket,
-  ArrowRight, DollarSign, TrendingUp, AlertCircle, Lightbulb, FileDown, Loader2
+  Calculator, Sparkles, Building2, Layers, PaintBucket,
+  ArrowRight, DollarSign, TrendingUp, AlertCircle, Lightbulb, FileDown, Loader2, Save, History, FileText
 } from 'lucide-react';
 
 interface RubroComputo {
@@ -48,16 +52,9 @@ interface ComputoResult {
 }
 
 const TIPOLOGIAS = [
-  'Vivienda unifamiliar',
-  'Edificio residencial',
-  'Oficinas',
-  'Comercial / Retail',
-  'Industrial / Galpón',
-  'Educativo',
-  'Salud / Clínica',
-  'Hotel / Hotelería',
-  'Mixto (residencial + comercial)',
-  'Otro',
+  'Vivienda unifamiliar', 'Edificio residencial', 'Oficinas',
+  'Comercial / Retail', 'Industrial / Galpón', 'Educativo',
+  'Salud / Clínica', 'Hotel / Hotelería', 'Mixto (residencial + comercial)', 'Otro',
 ];
 
 const TERMINACIONES = [
@@ -77,6 +74,11 @@ const fmt = (n: number) => new Intl.NumberFormat('es-AR', { style: 'currency', c
 
 export default function ComputoIA() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: obras = [] } = useObras();
+  const { data: proveedores = [] } = useProveedores();
+
   const [superficie, setSuperficie] = useState('');
   const [tipologia, setTipologia] = useState('');
   const [ubicacion, setUbicacion] = useState('');
@@ -85,6 +87,25 @@ export default function ComputoIA() {
   const [observaciones, setObservaciones] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ComputoResult | null>(null);
+
+  // Convert to presupuesto dialog
+  const [convertOpen, setConvertOpen] = useState(false);
+  const [convertForm, setConvertForm] = useState({ numero: '', obra_id: '', proveedor_id: '', descripcion: '' });
+  const [converting, setConverting] = useState(false);
+
+  // History
+  const { data: historial = [] } = useQuery({
+    queryKey: ['computos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('computos')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleGenerar = async () => {
     if (!superficie || !tipologia || !ubicacion) {
@@ -100,11 +121,105 @@ export default function ComputoIA() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setResult(data);
+
+      // Save to computos history
+      if (user) {
+        await supabase.from('computos').insert({
+          user_id: user.id,
+          superficie: Number(superficie),
+          tipologia,
+          ubicacion,
+          terminaciones,
+          pisos: Number(pisos),
+          observaciones: observaciones || null,
+          resultado: data as any,
+        });
+        queryClient.invalidateQueries({ queryKey: ['computos'] });
+      }
     } catch (e: any) {
       toast({ title: 'Error al generar cómputo', description: e.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const openConvertDialog = () => {
+    if (!result) return;
+    const now = new Date();
+    setConvertForm({
+      numero: `COMP-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
+      obra_id: '',
+      proveedor_id: '',
+      descripcion: `Cómputo IA: ${tipologia} ${superficie}m² - ${ubicacion} (${terminaciones})`,
+    });
+    setConvertOpen(true);
+  };
+
+  const handleConvert = async () => {
+    if (!result || !convertForm.numero) {
+      toast({ title: 'Completá el número de presupuesto', variant: 'destructive' });
+      return;
+    }
+    setConverting(true);
+    try {
+      // 1. Insert presupuesto
+      const { data: pres, error: presError } = await supabase.from('presupuestos').insert({
+        numero: convertForm.numero,
+        descripcion: convertForm.descripcion,
+        obra_id: convertForm.obra_id || null,
+        proveedor_id: convertForm.proveedor_id || null,
+        monto_total: result.resumen.totalConIVA,
+        moneda: 'USD' as any,
+        origen: 'computo_ia',
+        datos_computo: {
+          superficie: Number(superficie),
+          tipologia,
+          ubicacion,
+          terminaciones,
+          pisos: Number(pisos),
+          observaciones,
+          supuestos: result.supuestos,
+          recomendaciones: result.recomendaciones,
+          resumen: result.resumen,
+        } as any,
+      }).select('id').single();
+
+      if (presError) throw presError;
+
+      // 2. Insert rubros
+      const rubrosPayload = result.rubros.map(r => ({
+        presupuesto_id: pres.id,
+        nombre: r.nombre,
+        incidencia: r.incidencia,
+        costo_min: r.costoMin ?? null,
+        costo_max: r.costoMax ?? null,
+        costo_estimado: r.costoEstimado,
+        unidad: r.unidad || 'gl',
+        observaciones: r.observaciones || null,
+      }));
+
+      const { error: rubrosError } = await supabase.from('presupuesto_rubros').insert(rubrosPayload);
+      if (rubrosError) throw rubrosError;
+
+      toast({ title: 'Presupuesto creado', description: `${convertForm.numero} guardado con ${result.rubros.length} rubros.` });
+      queryClient.invalidateQueries({ queryKey: ['presupuestos'] });
+      setConvertOpen(false);
+    } catch (e: any) {
+      toast({ title: 'Error al convertir', description: e.message, variant: 'destructive' });
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const loadFromHistory = (computo: any) => {
+    const r = computo.resultado as any;
+    setSuperficie(String(computo.superficie));
+    setTipologia(computo.tipologia);
+    setUbicacion(computo.ubicacion);
+    setTerminaciones(computo.terminaciones);
+    setPisos(String(computo.pisos));
+    setObservaciones(computo.observaciones || '');
+    setResult(r);
   };
 
   const handleExportCSV = () => {
@@ -132,7 +247,6 @@ export default function ComputoIA() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-
       {/* Input form */}
       <Card>
         <CardHeader>
@@ -195,9 +309,14 @@ export default function ComputoIA() {
               {isLoading ? 'Generando cómputo...' : 'Generar Cómputo con IA'}
             </Button>
             {result && (
-              <Button variant="outline" onClick={handleExportCSV}>
-                <FileDown className="h-4 w-4 mr-2" />Exportar CSV
-              </Button>
+              <>
+                <Button variant="outline" onClick={openConvertDialog}>
+                  <Save className="h-4 w-4 mr-2" />Convertir en Presupuesto
+                </Button>
+                <Button variant="outline" onClick={handleExportCSV}>
+                  <FileDown className="h-4 w-4 mr-2" />Exportar CSV
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
@@ -347,6 +466,100 @@ export default function ComputoIA() {
           </p>
         </>
       )}
+
+      {/* Historial de cómputos */}
+      {historial.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <History className="h-5 w-5" /> Historial de Cómputos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {historial.map((c: any) => {
+                const r = c.resultado as any;
+                return (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => loadFromHistory(c)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {c.tipologia} — {c.superficie}m² — {c.ubicacion}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(c.created_at).toLocaleDateString('es-AR')} • {c.terminaciones} • {c.pisos} piso(s)
+                      </p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <p className="font-bold text-sm">{fmt(r?.resumen?.totalConIVA || 0)}</p>
+                      {c.presupuesto_id && (
+                        <Badge variant="secondary" className="text-xs">
+                          <FileText className="h-3 w-3 mr-1" />Convertido
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Convert to Presupuesto Dialog */}
+      <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Convertir en Presupuesto</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Número de Presupuesto *</Label>
+              <Input value={convertForm.numero} onChange={e => setConvertForm({ ...convertForm, numero: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Descripción</Label>
+              <Textarea value={convertForm.descripcion} onChange={e => setConvertForm({ ...convertForm, descripcion: e.target.value })} rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Obra (opcional)</Label>
+                <Select value={convertForm.obra_id} onValueChange={v => setConvertForm({ ...convertForm, obra_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectContent>
+                    {obras.map(o => <SelectItem key={o.id} value={o.id}>{o.nombre}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Proveedor (opcional)</Label>
+                <Select value={convertForm.proveedor_id} onValueChange={v => setConvertForm({ ...convertForm, proveedor_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                  <SelectContent>
+                    {proveedores.map(pr => <SelectItem key={pr.id} value={pr.id}>{pr.razon_social}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {result && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                <div className="flex justify-between"><span>Monto total</span><span className="font-bold">{fmt(result.resumen.totalConIVA)}</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>Rubros</span><span>{result.rubros.length} ítems</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>Moneda</span><span>USD</span></div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConvertOpen(false)}>Cancelar</Button>
+            <Button onClick={handleConvert} disabled={converting}>
+              {converting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Guardando...</> : 'Crear Presupuesto'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
