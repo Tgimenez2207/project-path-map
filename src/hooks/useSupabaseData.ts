@@ -293,6 +293,37 @@ export function useMateriales(soloTerminaciones?: boolean) {
   });
 }
 
+export function usePreciosProducto(productoId?: string) {
+  return useQuery({
+    queryKey: ['precios_producto', productoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('precios_producto')
+        .select('*, proveedores(razon_social, rubro)')
+        .eq('producto_id', productoId!)
+        .order('precio');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!productoId,
+  });
+}
+
+export function usePreciosProductos() {
+  return useQuery({
+    queryKey: ['precios_producto_all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('precios_producto')
+        .select('*, proveedores(razon_social)')
+        .eq('vigente', true)
+        .order('precio');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useSeleccionesTerminacion(unidadId?: string) {
   return useQuery({
     queryKey: ['selecciones_terminacion', unidadId],
