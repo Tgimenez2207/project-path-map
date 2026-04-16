@@ -14,6 +14,7 @@ import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Building2, Phone, Mail, MapPin, Plus, Search, BarChart3, Sparkles, Star, MessageSquare, FileText, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { mockProveedores } from '@/data/mockProveedores';
 import type { Proveedor, RubroProveedor, EstadoProveedor, Evaluacion, Cotizacion } from '@/types/proveedores';
@@ -52,6 +53,7 @@ const emptyForm = (): Omit<Proveedor, 'id' | 'evaluaciones' | 'cotizaciones' | '
 
 export default function Proveedores() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
 
   useEffect(() => {
@@ -265,7 +267,10 @@ export default function Proveedores() {
           <h1 className="text-2xl font-semibold">Proveedores</h1>
           <p className="text-muted-foreground text-sm">{proveedoresFiltrados.length} proveedores · {seleccionados.length} seleccionados</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => navigate('/proveedores/directorio')}>
+            <Search className="h-4 w-4 mr-2" />Buscar en el directorio nacional
+          </Button>
           {seleccionados.length >= 2 && (
             <Button variant="outline" onClick={() => { setShowComparacion(true); setIaComparacion(''); }}>
               <BarChart3 className="h-4 w-4 mr-2" />Comparar ({seleccionados.length})
