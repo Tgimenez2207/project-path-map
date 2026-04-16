@@ -1,9 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, Printer, Landmark } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { mockCuentas, mockMovimientos, mockCheques, mockCostosFijos } from '@/data/mockTesoreria';
 import { TesoreriaDashboard } from '@/components/tesoreria/TesoreriaDashboard';
 import { TesoreriaMovimientos } from '@/components/tesoreria/TesoreriaMovimientos';
@@ -13,7 +15,6 @@ import { TesoreriaReportes } from '@/components/tesoreria/TesoreriaReportes';
 import type { Movimiento, Cheque, CostoFijo } from '@/types/tesoreria';
 
 const Tesoreria = () => {
-  const { toast } = useToast();
   const [cuentas] = useState(mockCuentas);
   const [movimientos, setMovimientos] = useState<Movimiento[]>(mockMovimientos);
   const [cheques, setCheques] = useState<Cheque[]>(mockCheques);
@@ -21,6 +22,7 @@ const Tesoreria = () => {
   const [tabActiva, setTabActiva] = useState('dashboard');
   const [isLoadingIA, setIsLoadingIA] = useState(false);
   const [analisisIA, setAnalisisIA] = useState<string | null>(null);
+  const [tipoCambio, setTipoCambio] = useState('1150');
 
   const [filtroMovimientos, setFiltroMovimientos] = useState({ tipo: 'todos', categoria: 'todas', cuentaId: 'todas', conciliado: 'todos', busqueda: '' });
 
@@ -70,46 +72,111 @@ const Tesoreria = () => {
   }, []);
 
   const addMovimiento = useCallback((m: Omit<Movimiento, 'id'>) => {
+    // Validate same currency for transfers
+    if (m.tipo === 'transferencia' && m.cuentaDestinoId) {
+      const origen = cuentas.find(c => c.id === m.cuentaId);
+      const destino = cuentas.find(c => c.id === m.cuentaDestinoId);
+      if (origen && destino && origen.moneda !== destino.moneda) {
+        toast.error('Las cuentas de transferencia deben tener la misma moneda');
+        return;
+      }
+    }
     setMovimientos(prev => [{ ...m, id: `m${Date.now()}` } as Movimiento, ...prev]);
-    toast({ title: 'Movimiento registrado' });
-  }, [toast]);
+    toast.success('Movimiento registrado');
+  }, [cuentas]);
 
   const depositarCheque = useCallback((id: string) => {
     setCheques(prev => prev.map(c => c.id === id ? { ...c, estado: 'depositado' as const, fechaDeposito: new Date().toISOString().split('T')[0] } : c));
-    toast({ title: 'Cheque depositado' });
-  }, [toast]);
+    toast.success('Cheque marcado como depositado');
+  }, []);
 
-  const endosarCheque = useCallback((id: string) => {
-    const dest = prompt('Endosar a:');
-    if (!dest) return;
-    setCheques(prev => prev.map(c => c.id === id ? { ...c, estado: 'endosado' as const, endosadoA: dest, fechaEndoso: new Date().toISOString().split('T')[0] } : c));
-    toast({ title: 'Cheque endosado' });
-  }, [toast]);
+  const endosarCheque = useCallback((id: string, endosadoA: string) => {
+    setCheques(prev => prev.map(c => c.id === id ? { ...c, estado: 'endosado' as const, endosadoA, fechaEndoso: new Date().toISOString().split('T')[0] } : c));
+    toast.success(`Cheque endosado a ${endosadoA}`);
+  }, []);
 
   const addCheque = useCallback((c: Omit<Cheque, 'id'>) => {
     setCheques(prev => [{ ...c, id: `chq${Date.now()}` } as Cheque, ...prev]);
-    toast({ title: 'Cheque registrado' });
-  }, [toast]);
+    toast.success('Cheque registrado');
+  }, []);
 
   const addCostoFijo = useCallback((c: Omit<CostoFijo, 'id'>) => {
     setCostosFijos(prev => [{ ...c, id: `cf${Date.now()}` } as CostoFijo, ...prev]);
-    toast({ title: 'Costo fijo agregado' });
-  }, [toast]);
+    toast.success('Costo fijo agregado');
+  }, []);
 
   const toggleCostoActivo = useCallback((id: string) => {
     setCostosFijos(prev => prev.map(c => c.id === id ? { ...c, activo: !c.activo } : c));
   }, []);
 
+  const deleteCostoFijo = useCallback((id: string) => {
+    setCostosFijos(prev => prev.filter(c => c.id !== id));
+    toast.success('Costo fijo eliminado');
+  }, []);
+
+  const pagarCostoFijo = useCallback((costo: CostoFijo, cuentaId: string) => {
+    const nuevoMov: Movimiento = {
+      id: `m${Date.now()}`,
+      fecha: new Date().toISOString().split('T')[0],
+      tipo: 'egreso',
+      categoria: costo.categoria,
+      descripcion: costo.descripcion,
+      monto: costo.monto,
+      moneda: costo.moneda,
+      cuentaId,
+      creadoPor: 'Sistema',
+      conciliado: false,
+    };
+    setMovimientos(prev => [nuevoMov, ...prev]);
+    if (costo.proximoVencimiento && costo.esRecurrente) {
+      const proxVenc = new Date(costo.proximoVencimiento);
+      proxVenc.setMonth(proxVenc.getMonth() + 1);
+      setCostosFijos(prev => prev.map(c => c.id === costo.id ? { ...c, proximoVencimiento: proxVenc.toISOString().split('T')[0] } : c));
+    }
+    toast.success(`Pago de "${costo.descripcion}" registrado`);
+  }, []);
+
   const handleAnalisisIA = useCallback(async () => {
     setIsLoadingIA(true);
-    setTimeout(() => {
-      setAnalisisIA(`📊 Resumen financiero Nato Obras\n\n✅ Posición consolidada: ARS ${saldoTotalARS.toLocaleString('es-AR')} + USD ${saldoTotalUSD.toLocaleString('es-AR')}\n\n⚠️ ${chequesProximosAVencer.length} cheques próximos a vencer por ARS ${chequesProximosAVencer.reduce((a, c) => a + c.monto, 0).toLocaleString('es-AR')}\n\n💡 Recomendaciones:\n• Revisar cheques en cartera y priorizar depósitos\n• Los costos fijos mensuales representan ARS ${costosFijos.filter(c => c.activo && c.moneda === 'ARS').reduce((a, c) => a + c.monto, 0).toLocaleString('es-AR')}\n• Considerar consolidar pagos a proveedores para optimizar flujo`);
+    setAnalisisIA(null);
+    try {
+      const prompt = `Analizá esta situación financiera de una constructora argentina:
+
+POSICIÓN DE CAJA:
+${saldosPorCuenta.map(c => `${c.nombre}: ${c.moneda} ${c.saldo.toLocaleString()}`).join('\n')}
+Total ARS: ${saldoTotalARS.toLocaleString()}
+Total USD: ${saldoTotalUSD.toLocaleString()}
+
+FLUJO DEL MES:
+Ingresos ARS: ${totalIngresosMes.ars.toLocaleString()} | Egresos ARS: ${totalEgresosMes.ars.toLocaleString()}
+Ingresos USD: ${totalIngresosMes.usd.toLocaleString()} | Egresos USD: ${totalEgresosMes.usd.toLocaleString()}
+
+CHEQUES PRÓXIMOS A VENCER:
+${chequesProximosAVencer.map(c => {
+  const dias = Math.ceil((new Date(c.fechaVencimiento).getTime() - Date.now()) / 86400000);
+  return `- ${c.tipo === 'propio' ? 'PROPIO' : 'TERCERO'}: ${c.moneda} ${c.monto.toLocaleString()} — vence en ${dias} días`;
+}).join('\n') || 'Ninguno'}
+
+COSTOS FIJOS MENSUALES: ARS ${costosFijos.filter(c => c.activo && c.moneda === 'ARS').reduce((a, c) => a + c.monto, 0).toLocaleString()}/mes
+MOVIMIENTOS SIN CONCILIAR: ${movimientos.filter(m => !m.conciliado).length}`;
+
+      const { data, error } = await supabase.functions.invoke('ai-finanzas', {
+        body: { prompt, system: 'Sos un CFO y asesor financiero para una constructora/desarrolladora inmobiliaria argentina. Analizás la situación de caja, cheques y costos fijos y das recomendaciones concretas en español rioplatense. Máximo 400 palabras. Estructurá con: 1) Salud financiera general 2) Alertas urgentes 3) Oportunidades de optimización 4) Recomendaciones próximos 30 días' },
+      });
+      if (error) throw error;
+      setAnalisisIA(data?.text || data?.response || 'Análisis no disponible');
+    } catch {
+      // Fallback to local summary
+      setAnalisisIA(`📊 Resumen financiero Nato Obras\n\n✅ Posición consolidada: ARS ${saldoTotalARS.toLocaleString('es-AR')} + USD ${saldoTotalUSD.toLocaleString('es-AR')}\n\n⚠️ ${chequesProximosAVencer.length} cheques próximos a vencer por ARS ${chequesProximosAVencer.reduce((a, c) => a + c.monto, 0).toLocaleString('es-AR')}\n\n💡 Recomendaciones:\n• Revisar cheques en cartera y priorizar depósitos\n• Los costos fijos mensuales representan ARS ${costosFijos.filter(c => c.activo && c.moneda === 'ARS').reduce((a, c) => a + c.monto, 0).toLocaleString('es-AR')}\n• Considerar consolidar pagos a proveedores para optimizar flujo\n• ${movimientos.filter(m => !m.conciliado).length} movimientos sin conciliar — revisar semanalmente`);
+    } finally {
       setIsLoadingIA(false);
-    }, 1500);
-  }, [saldoTotalARS, saldoTotalUSD, chequesProximosAVencer, costosFijos]);
+    }
+  }, [saldosPorCuenta, saldoTotalARS, saldoTotalUSD, totalIngresosMes, totalEgresosMes, chequesProximosAVencer, costosFijos, movimientos]);
+
+  const tc = parseFloat(tipoCambio) || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
@@ -119,10 +186,15 @@ const Tesoreria = () => {
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Posición ARS: {saldoTotalARS.toLocaleString('es-AR')} · Posición USD: {saldoTotalUSD.toLocaleString('es-AR')}
+            {tc > 0 && <span className="text-muted-foreground"> · Equiv. ARS {(saldoTotalARS + saldoTotalUSD * tc).toLocaleString('es-AR')}</span>}
             {chequesProximosAVencer.length > 0 && <span className="text-amber-600"> · {chequesProximosAVencer.length} cheques por vencer</span>}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center print:hidden">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>TC:</span>
+            <Input className="w-20 h-8 text-xs" value={tipoCambio} onChange={e => setTipoCambio(e.target.value)} placeholder="ARS/USD" />
+          </div>
           <Button variant="outline" size="sm" onClick={handleAnalisisIA} disabled={isLoadingIA}>
             <Sparkles className="h-4 w-4 mr-1" /> Análisis IA
           </Button>
@@ -134,7 +206,7 @@ const Tesoreria = () => {
 
       {/* Tabs */}
       <Tabs value={tabActiva} onValueChange={setTabActiva}>
-        <TabsList className="w-full sm:w-auto">
+        <TabsList className="w-full sm:w-auto print:hidden">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
           <TabsTrigger value="cheques" className="relative">
@@ -172,11 +244,11 @@ const Tesoreria = () => {
         </TabsContent>
 
         <TabsContent value="costos">
-          <TesoreriaCostos costosFijos={costosFijos} onAdd={addCostoFijo} onToggleActivo={toggleCostoActivo} />
+          <TesoreriaCostos costosFijos={costosFijos} cuentas={cuentas} onAdd={addCostoFijo} onToggleActivo={toggleCostoActivo} onDelete={deleteCostoFijo} onPagar={pagarCostoFijo} />
         </TabsContent>
 
         <TabsContent value="reportes">
-          <TesoreriaReportes movimientos={movimientos} />
+          <TesoreriaReportes movimientos={movimientos} costosFijos={costosFijos} saldoTotalARS={saldoTotalARS} />
         </TabsContent>
       </Tabs>
     </div>
