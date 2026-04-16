@@ -54,9 +54,9 @@ const rolePermissions: Record<AppRole, string[]> = {
 
 const moduleAccess: Record<AppRole, string[]> = {
   admin: ['*'],
-  operaciones: ['dashboard', 'obras', 'tareas', 'bitacora', 'documentos', 'stock', 'herramientas', 'flota', 'calendario', 'notas', 'ia'],
-  finanzas: ['dashboard', 'obras', 'presupuestos', 'clientes', 'proveedores', 'cobros', 'reportes', 'calendario', 'notas', 'ia'],
-  ventas: ['dashboard', 'obras', 'unidades', 'clientes', 'reservas', 'calendario', 'notas', 'ia'],
+  operaciones: ['dashboard', 'obras', 'tareas', 'bitacora', 'documentos', 'stock', 'herramientas', 'flota', 'calendario', 'notas', 'ia', 'ayuda'],
+  finanzas: ['dashboard', 'obras', 'presupuestos', 'clientes', 'proveedores', 'cobros', 'reportes', 'calendario', 'notas', 'ia', 'ayuda'],
+  ventas: ['dashboard', 'obras', 'unidades', 'clientes', 'reservas', 'calendario', 'notas', 'ia', 'ayuda'],
   cliente: ['portal'],
 };
 
