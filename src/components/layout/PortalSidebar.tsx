@@ -7,6 +7,7 @@ import {
   FileText,
   Camera,
   HardHat,
+  Palette,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +17,7 @@ const menuItems = [
   { title: 'Pagos', url: '/portal/pagos', icon: CreditCard },
   { title: 'Documentos', url: '/portal/documentos', icon: FileText },
   { title: 'Avance de Obra', url: '/portal/avance', icon: Camera },
+  { title: 'Terminaciones', url: '/portal/terminaciones', icon: Palette },
 ];
 
 export function PortalSidebar() {
