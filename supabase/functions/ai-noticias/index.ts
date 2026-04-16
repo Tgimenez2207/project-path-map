@@ -6,6 +6,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Priority Argentine construction/real-estate portals
+const DOMAIN_PRIORITY = [
+  "infobae.com", "lanacion.com.ar", "clarin.com", "ambito.com",
+  "cronista.com", "camarco.org.ar", "cedu.com.ar", "uocra.org",
+  "areasglobales.com", "reporteinmobiliario.com", "infoconstruccion.com",
+  "iprofesional.com", "bae.com.ar", "telam.com.ar",
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -13,54 +21,97 @@ serve(async (req) => {
 
   try {
     const { busqueda } = await req.json();
+
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY no configurada");
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY no configurada");
 
-    const now = new Date();
-    const mesAnio = now.toLocaleDateString("es-AR", { month: "long", year: "numeric" });
-    const anio = now.getFullYear();
-
+    // Build search queries
     const queries = busqueda
-      ? [busqueda]
+      ? [`${busqueda} Argentina construcción`]
       : [
-          `construcción inmobiliario Argentina noticias ${mesAnio}`,
-          `precios materiales construcción Argentina variación ${anio}`,
-          `regulaciones permisos obras Argentina ${anio}`,
-          `mercado inmobiliario Argentina tendencias ${mesAnio}`,
-          `costos construcción índice CAC Argentina ${anio}`,
+          "construcción inmobiliario Argentina noticias",
+          "precios materiales construcción Argentina",
+          "mercado inmobiliario créditos hipotecarios Argentina",
         ];
 
-    const systemPrompt = `Sos un analista experto en el sector construcción e inmobiliario de Argentina. Tu tarea es generar un resumen de noticias recientes y relevantes para constructoras, desarrolladoras y arquitectos argentinos basándote en tu conocimiento actualizado.
+    // Step 1: Search real news with Firecrawl
+    console.log("Searching news with Firecrawl:", queries);
+    const allResults: any[] = [];
 
-IMPORTANTE: Devolvé ÚNICAMENTE un JSON válido con este formato exacto, sin texto adicional, sin markdown, sin backticks:
+    for (const query of queries) {
+      try {
+        const searchResponse = await fetch("https://api.firecrawl.dev/v2/search", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${FIRECRAWL_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query,
+            limit: 8,
+            lang: "es",
+            country: "AR",
+            tbs: "qdr:w", // Last week
+            scrapeOptions: {
+              formats: ["markdown"],
+            },
+          }),
+        });
 
-{
-  "noticias": [
-    {
-      "titulo": "string conciso y claro",
-      "resumen": "2-3 oraciones explicando la noticia y por qué importa para el sector. En español rioplatense.",
-      "categoria": "construccion" | "inmobiliario" | "materiales" | "regulatorio" | "economia" | "tecnologia",
-      "fuente": "nombre del medio o institución",
-      "url": "URL real y válida del artículo original en el sitio del medio. Debe ser una URL directa al artículo, NO un enlace a Google. Ejemplo: https://www.infobae.com/economia/2025/04/construccion-costos. Si no conocés la URL exacta, usá la URL de la sección relevante del medio (ej: https://www.lanacion.com.ar/propiedades/, https://www.infobae.com/economia/, https://www.cronista.com/real-estate/).",
-      "fecha": "fecha aproximada en formato DD/MM/YYYY",
-      "relevancia": "alta" | "media" | "baja"
+        if (!searchResponse.ok) {
+          const errText = await searchResponse.text();
+          console.error(`Firecrawl search error for "${query}":`, searchResponse.status, errText);
+          if (searchResponse.status === 402) {
+            return new Response(JSON.stringify({ error: "Créditos de búsqueda agotados." }), {
+              status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          continue;
+        }
+
+        const searchData = await searchResponse.json();
+        const rawData = searchData.data;
+        const results = Array.isArray(rawData) ? rawData
+          : rawData?.web && Array.isArray(rawData.web) ? rawData.web
+          : [];
+
+        allResults.push(...results);
+      } catch (e) {
+        console.error(`Error searching "${query}":`, e);
+      }
     }
-  ]
-}
 
-Criterios de relevancia:
-- alta: impacto directo en costos, regulaciones vigentes o tendencias de mercado
-- media: información útil pero no urgente
-- baja: contexto general o tendencias internacionales
+    console.log(`Total Firecrawl results: ${allResults.length}`);
 
-Devolvé entre 8 y 12 noticias. Priorizá fuentes argentinas confiables: Infobae, La Nación, Clarín, Ámbito, El Cronista, CEDU, UOCRA, INDEC, BCRA, CAC (Cámara Argentina de Construcción).`;
+    if (!allResults.length) {
+      return new Response(JSON.stringify({ noticias: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const userPrompt = `Generá noticias relevantes sobre: ${queries.join(" | ")}. 
-Período: última semana. País: Argentina.
-Incluí noticias sobre: sector construcción, mercado inmobiliario, precios de materiales (acero, cemento, ladrillos, madera), cambios regulatorios, índices de costos (CAC, ICC), créditos hipotecarios y política de vivienda.
-Fecha actual: ${now.toLocaleDateString("es-AR")}`;
+    // Deduplicate by URL
+    const seen = new Set<string>();
+    const uniqueResults = allResults.filter(r => {
+      if (!r.url || seen.has(r.url)) return false;
+      seen.add(r.url);
+      return true;
+    });
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Step 2: Build context from real search results
+    const webContext = uniqueResults.slice(0, 20).map((r: any, i: number) => {
+      const parts = [`--- Artículo ${i + 1} ---`];
+      if (r.title) parts.push(`Título: ${r.title}`);
+      if (r.url) parts.push(`URL: ${r.url}`);
+      if (r.description) parts.push(`Descripción: ${r.description}`);
+      if (r.markdown) parts.push(`Contenido:\n${r.markdown.slice(0, 1500)}`);
+      return parts.join("\n");
+    }).join("\n\n");
+
+    // Step 3: Use AI to extract and categorize news from real results
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
@@ -69,34 +120,94 @@ Fecha actual: ${now.toLocaleDateString("es-AR")}`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          {
+            role: "system",
+            content: `Sos un analista del sector construcción e inmobiliario de Argentina. Tu tarea es extraer y categorizar noticias REALES de los resultados de búsqueda web provistos.
+
+REGLAS CRÍTICAS:
+- Solo extraé noticias que estén PRESENTES en los resultados de búsqueda.
+- NO inventes noticias. Cada noticia debe corresponder a un artículo real.
+- El título debe ser el título real del artículo (podés resumirlo si es muy largo).
+- La URL debe ser la URL EXACTA del artículo encontrado.
+- La fuente debe ser el nombre del medio real (extraído de la URL).
+- El resumen debe basarse en el contenido real del artículo.
+- Si un resultado no es relevante para construcción/inmobiliario, ignoralo.
+- Escribí en español rioplatense.`,
+          },
+          {
+            role: "user",
+            content: `Extraé las noticias relevantes para el sector construcción/inmobiliario de estos resultados de búsqueda web reales:
+
+${webContext}
+
+Usá la función provista para devolver las noticias estructuradas. Solo incluí noticias reales encontradas en los resultados.`,
+          },
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "devolver_noticias",
+              description: "Devuelve noticias extraídas de resultados de búsqueda web reales",
+              parameters: {
+                type: "object",
+                properties: {
+                  noticias: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        titulo: { type: "string", description: "Título real del artículo" },
+                        resumen: { type: "string", description: "Resumen de 2-3 oraciones basado en el contenido real" },
+                        categoria: {
+                          type: "string",
+                          enum: ["construccion", "inmobiliario", "materiales", "regulatorio", "economia", "tecnologia"],
+                        },
+                        fuente: { type: "string", description: "Nombre del medio (ej: Infobae, La Nación)" },
+                        url: { type: "string", description: "URL exacta del artículo" },
+                        fecha: { type: "string", description: "Fecha en formato DD/MM/YYYY" },
+                        relevancia: { type: "string", enum: ["alta", "media", "baja"] },
+                      },
+                      required: ["titulo", "resumen", "categoria", "fuente", "url", "fecha", "relevancia"],
+                    },
+                  },
+                },
+                required: ["noticias"],
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "devolver_noticias" } },
       }),
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido, intentá en unos minutos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!aiResponse.ok) {
+      const status = aiResponse.status;
+      if (status === 429) {
+        return new Response(JSON.stringify({ error: "Límite de consultas excedido. Intentá en unos minutos." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      const t = await aiResponse.text();
+      console.error("AI gateway error:", status, t);
+      throw new Error("Error del gateway de IA");
     }
 
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || "";
+    const data = await aiResponse.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) {
+      return new Response(JSON.stringify({ noticias: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    return new Response(JSON.stringify({ text }), {
+    const args = JSON.parse(toolCall.function.arguments);
+    return new Response(JSON.stringify(args), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
