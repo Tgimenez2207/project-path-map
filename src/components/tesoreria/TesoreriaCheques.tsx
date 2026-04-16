@@ -13,7 +13,7 @@ interface Props {
   cheques: Cheque[];
   cuentas: Cuenta[];
   onDepositar: (id: string) => void;
-  onEndosar: (id: string) => void;
+  onEndosar: (id: string, endosadoA: string) => void;
   onAddCheque: (c: Omit<Cheque, 'id'>) => void;
 }
 
@@ -23,6 +23,8 @@ export function TesoreriaCheques({ cheques, cuentas, onDepositar, onEndosar, onA
   const [mesCalendario, setMesCalendario] = useState(new Date());
   const [showNuevo, setShowNuevo] = useState(false);
   const [tipoChequeNuevo, setTipoChequeNuevo] = useState<TipoCheque>('propio');
+  const [showEndosar, setShowEndosar] = useState<string | null>(null);
+  const [endosarA, setEndosarA] = useState('');
 
   const chequesFiltrados = useMemo(() => {
     return cheques.filter(c => {
@@ -40,6 +42,8 @@ export function TesoreriaCheques({ cheques, cuentas, onDepositar, onEndosar, onA
 
   const [form, setForm] = useState({ numero: '', banco: '', titular: '', recibiDe: '', monto: '', moneda: 'ARS' as 'ARS' | 'USD', fechaEmision: new Date().toISOString().split('T')[0], fechaVencimiento: '', cuentaId: '', obraNombre: '', notas: '' });
 
+  const resetForm = () => setForm({ numero: '', banco: '', titular: '', recibiDe: '', monto: '', moneda: 'ARS', fechaEmision: new Date().toISOString().split('T')[0], fechaVencimiento: '', cuentaId: '', obraNombre: '', notas: '' });
+
   const guardar = () => {
     if (!form.numero || !form.banco || !form.monto || !form.fechaVencimiento) return;
     onAddCheque({
@@ -51,19 +55,27 @@ export function TesoreriaCheques({ cheques, cuentas, onDepositar, onEndosar, onA
       obraNombre: form.obraNombre || undefined, notas: form.notas || undefined,
     });
     setShowNuevo(false);
+    resetForm();
+  };
+
+  const handleEndosar = () => {
+    if (!showEndosar || !endosarA.trim()) return;
+    onEndosar(showEndosar, endosarA.trim());
+    setShowEndosar(null);
+    setEndosarA('');
   };
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
-        <Button variant={vistaCalendario ? 'default' : 'outline'} size="sm" onClick={() => setVistaCalendario(true)}>📅 Calendario</Button>
-        <Button variant={!vistaCalendario ? 'default' : 'outline'} size="sm" onClick={() => setVistaCalendario(false)}>≡ Lista</Button>
-        <Button size="sm" variant="outline" className="ml-auto" onClick={() => setShowNuevo(true)}><Plus className="h-4 w-4 mr-1" /> Nuevo cheque</Button>
+        <Button variant={vistaCalendario ? 'default' : 'outline'} size="sm" onClick={() => setVistaCalendario(true)} className="hidden md:inline-flex">📅 Calendario</Button>
+        <Button variant={!vistaCalendario ? 'default' : 'outline'} size="sm" onClick={() => setVistaCalendario(false)} className="hidden md:inline-flex">≡ Lista</Button>
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => { setShowNuevo(true); resetForm(); }}><Plus className="h-4 w-4 mr-1" /> Nuevo cheque</Button>
       </div>
 
-      {/* Calendario */}
+      {/* Calendario - hidden on mobile */}
       {vistaCalendario && (
-        <div className="mb-4">
+        <div className="mb-4 hidden md:block">
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => setMesCalendario(p => { const d = new Date(p); d.setMonth(d.getMonth() - 1); return d; })}><ChevronLeft className="h-5 w-5" /></button>
             <p className="font-medium capitalize">{mesCalendario.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</p>
@@ -137,7 +149,7 @@ export function TesoreriaCheques({ cheques, cuentas, onDepositar, onEndosar, onA
                     {c.estado === 'en_cartera' && (
                       <div className="flex gap-1">
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onDepositar(c.id)}>Depositar</Button>
-                        {c.tipo === 'terceros' && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onEndosar(c.id)}>Endosar</Button>}
+                        {c.tipo === 'terceros' && <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setShowEndosar(c.id); setEndosarA(''); }}>Endosar</Button>}
                       </div>
                     )}
                   </td>
@@ -147,6 +159,17 @@ export function TesoreriaCheques({ cheques, cuentas, onDepositar, onEndosar, onA
           </tbody>
         </table>
       </div>
+
+      {/* Dialog endosar */}
+      <Dialog open={!!showEndosar} onOpenChange={() => setShowEndosar(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Endosar cheque</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><label className="text-xs text-muted-foreground">¿A quién se endosa?</label><Input value={endosarA} onChange={e => setEndosarA(e.target.value)} placeholder="Nombre o razón social" /></div>
+            <Button className="w-full" onClick={handleEndosar} disabled={!endosarA.trim()}>Confirmar endoso</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog nuevo cheque */}
       <Dialog open={showNuevo} onOpenChange={setShowNuevo}>
