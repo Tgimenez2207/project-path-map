@@ -53,8 +53,10 @@ serve(async (req) => {
     }
 
     const searchData = await searchResponse.json();
-    console.log("Firecrawl response:", JSON.stringify(searchData).slice(0, 500));
-    const results = Array.isArray(searchData.data) ? searchData.data : [];
+    const rawData = searchData.data;
+    const results = Array.isArray(rawData) ? rawData 
+      : rawData?.web && Array.isArray(rawData.web) ? rawData.web 
+      : [];
     console.log(`Firecrawl returned ${results.length} results`);
 
     if (!results.length) {
