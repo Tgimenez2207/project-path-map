@@ -202,7 +202,16 @@ export default function Presupuestos() {
                 const transitions = estadoTransitions[p.estado] || [];
                 return (
                   <TableRow key={p.id}>
-                    <TableCell className="font-mono text-xs">{p.numero}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      <div className="flex items-center gap-2">
+                        {p.numero}
+                        {(p as any).origen === 'computo_ia' && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Sparkles className="h-3 w-3" />IA
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-medium max-w-[200px] truncate">{p.descripcion}</TableCell>
                     <TableCell className="text-sm">{(p as any).obras?.nombre || '-'}</TableCell>
                     <TableCell className="text-sm">{(p as any).proveedores?.razon_social || '-'}</TableCell>
