@@ -51,7 +51,7 @@ function PortalLoginContent() {
     // Simular delay de autenticación
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    const success = loginWithEmail(email, password);
+    const success = await loginWithEmail(email, password);
     if (success) {
       toast({
         title: 'Bienvenido',
@@ -68,7 +68,7 @@ function PortalLoginContent() {
     setIsLoading(false);
   };
 
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
     if (!selectedCliente) {
       toast({
         title: 'Seleccione un cliente',
@@ -78,7 +78,7 @@ function PortalLoginContent() {
       return;
     }
 
-    const success = login(selectedCliente);
+    const success = await login(selectedCliente);
     if (success) {
       toast({
         title: 'Modo Demo',
