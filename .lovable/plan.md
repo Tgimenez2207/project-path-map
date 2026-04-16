@@ -1,56 +1,49 @@
 
 
-# Plan: Directorio Nacional de Proveedores
+# Plan: Flujo integrado Cómputo IA → Presupuesto guardado
 
-## Overview
-Create a new page at `/proveedores/directorio` with a searchable directory of providers, AI-powered web search, reviews system, and import-to-my-providers functionality.
+## Problema actual
+El Cómputo IA genera una estimación que solo se puede exportar a CSV. Los presupuestos se crean manualmente en otra pestaña. No hay conexión entre ambos.
 
-## Files to create
+## Flujo propuesto
 
-### 1. `src/types/directorio.ts`
-Type definitions as specified (RubroDirectorio, ProveedorDirectorio, ReseñaDirectorio, etc.)
+```text
+┌──────────────┐    "Convertir en     ┌──────────────────┐    Guardar    ┌───────────────┐
+│  Cómputo IA  │──  Presupuesto" ──>  │ Formulario con   │──────────>   │ Presupuesto   │
+│  (genera     │                      │ datos prellenados │              │ en DB con     │
+│   estimación)│                      │ + rubros como     │              │ desglose de   │
+└──────────────┘                      │   ítems detalle   │              │ rubros        │
+                                      └──────────────────┘              └───────────────┘
+```
 
-### 2. `src/data/mockDirectorio.ts`
-16 mock providers with varied rubros, provinces, availability, reviews. Include `calcRating` helper.
+## Cambios
 
-### 3. `src/pages/DirectorioProveedores.tsx`
-Full page component with:
-- Header with back navigation to `/proveedores`
-- Search bar with "Buscar con IA" button
-- 4 filter selects (rubro, provincia, rating, disponibilidad) + clear button
-- 3 tabs: Base NATO OBRAS / Resultados IA / Guardados
-- 4 KPI cards (total, verified with reviews, available now, provinces covered)
-- 2-column grid of provider cards (1-col on mobile)
-- Inline expandable detail panel (col-span-2) with contact info, dimension bars, reviews, import/bookmark actions
-- Review submission dialog (4 sliders + comment + optional obra)
-- Review report modal
-- IA loading state with animation
-- Empty states per tab
+### 1. Nueva tabla `presupuesto_items` (migración)
+Almacena el desglose por rubros de cada presupuesto:
+- `id`, `presupuesto_id` (FK), `nombre` (rubro), `incidencia`, `costo_min`, `costo_max`, `costo_estimado`, `unidad`, `observaciones`
+- RLS: mismas políticas que `presupuestos`
 
-### 4. AI search via Edge Function
-The spec calls Anthropic directly from the client -- this must go through a Supabase Edge Function using the Lovable AI Gateway instead. Create `supabase/functions/ai-directorio/index.ts` that takes a search query, calls Lovable AI with tool-calling to return structured provider data, and returns JSON.
+### 2. Agregar columna `origen` a `presupuestos` (migración)
+- Campo `origen TEXT DEFAULT 'manual'` para distinguir presupuestos creados manualmente vs generados desde Cómputo IA
+- Campo `datos_computo JSONB` para guardar los supuestos, recomendaciones y parámetros originales del cómputo
 
-## Files to modify
+### 3. Botón "Convertir en Presupuesto" en ComputoIATab
+Después de generar un cómputo, aparece un botón que:
+- Abre un diálogo con datos prellenados (descripción auto-generada, monto total, moneda USD)
+- Permite seleccionar obra y proveedor antes de guardar
+- Al guardar: inserta el presupuesto + todos los rubros como `presupuesto_items`
 
-### 5. `src/App.tsx`
-Add route: `<Route path="proveedores/directorio" element={<DirectorioProveedores />} />`
+### 4. Vista detalle con desglose de rubros en PresupuestosListTab
+- Al ver un presupuesto que tiene ítems, mostrar la tabla de rubros con incidencias y costos
+- Badge "Generado por IA" cuando `origen = 'computo_ia'`
 
-### 6. `src/pages/Proveedores.tsx`
-Add a prominent button in the header linking to `/proveedores/directorio` with Search icon and "Buscar en el directorio nacional" label.
+### 5. Historial de cómputos guardados
+- Nueva tabla `computos` para persistir cada cómputo generado (parámetros de entrada + resultado completo)
+- En la pestaña Cómputo IA, mostrar un listado de cómputos anteriores que se pueden volver a ver o convertir en presupuesto
 
-## Technical details
-
-- **AI search**: Edge function `ai-directorio` uses Lovable AI Gateway with `google/gemini-3-flash-preview` and tool-calling to extract structured provider data. The system prompt instructs the model to search for Argentine construction providers.
-- **Inline detail panel**: Rendered by iterating the filtered array and inserting a col-span-2 detail div after the selected card's row position. This requires calculating grid row positions (every 2 cards = 1 row in desktop).
-- **Mobile**: Filters collapse into a Sheet. Grid becomes single column.
-- **Import action**: Updates local state, shows toast. In production this would insert into the `proveedores` Supabase table.
-- **Review form**: 4 Slider components (1-5) for dimensions, optional obra select, textarea comment. Adds review to local state.
-- **No DB migration needed**: This feature uses mock data locally for now, matching the spec's approach.
-
-## Scope
-- ~800 lines for DirectorioProveedores.tsx (large single-page component)
-- ~300 lines for mockDirectorio.ts
-- ~50 lines for types
-- ~80 lines for edge function
-- Minor edits to App.tsx and Proveedores.tsx
+## Archivos a modificar/crear
+- **Migración SQL**: crear `presupuesto_items`, `computos`, agregar columnas a `presupuestos`
+- `src/components/presupuestos/ComputoIATab.tsx`: botón convertir, historial de cómputos
+- `src/components/presupuestos/PresupuestosListTab.tsx`: vista detalle con rubros, badge origen
+- `src/hooks/useSupabaseData.ts`: hooks para `presupuesto_items` y `computos`
 
