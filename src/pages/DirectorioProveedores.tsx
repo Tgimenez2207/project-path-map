@@ -160,10 +160,31 @@ export default function DirectorioProveedores() {
     }
   };
 
-  const handleImportar = (p: ProveedorDirectorio) => {
-    setDirectorio(prev => prev.map(d => d.id === p.id ? { ...d, yaImportado: true } : d));
-    setResultadosIA(prev => prev.map(d => d.id === p.id ? { ...d, yaImportado: true } : d));
-    toast({ title: `${p.razonSocial} agregado a tus proveedores` });
+  const handleImportar = async (p: ProveedorDirectorio) => {
+    try {
+      const insertData: any = {
+        razon_social: p.razonSocial,
+        rubro: p.rubro,
+        subrubro: p.subrubro || null,
+        contacto: p.contacto || null,
+        telefono: p.telefono || null,
+        email: p.email || null,
+        ciudad: p.ciudad || null,
+        provincia: p.provincia || null,
+        cuit: p.cuit || '00-00000000-0',
+        web: p.web || null,
+        activo: true,
+        tipo: 'subcontratista',
+      };
+      const { error } = await supabase.from('proveedores').insert(insertData);
+      if (error) throw error;
+      setDirectorio(prev => prev.map(d => d.id === p.id ? { ...d, yaImportado: true } : d));
+      setResultadosIA(prev => prev.map(d => d.id === p.id ? { ...d, yaImportado: true } : d));
+      toast({ title: `${p.razonSocial} agregado a tus proveedores` });
+    } catch (e: any) {
+      console.error('Error importando proveedor:', e);
+      toast({ title: 'Error al importar proveedor', description: e.message, variant: 'destructive' });
+    }
   };
 
   const handleToggleGuardado = (p: ProveedorDirectorio) => {
