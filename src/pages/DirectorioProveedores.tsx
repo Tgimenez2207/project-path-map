@@ -20,7 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { mockDirectorio, calcRating } from '@/data/mockDirectorio';
 import { mockObras } from '@/data/mockObras';
-import type { ProveedorDirectorio, RubroDirectorio, OrigenDirectorio, ReseñaDirectorio } from '@/types/directorio';
+import type { ProveedorDirectorio, RubroDirectorio, OrigenDirectorio, ReseñaDirectorio, ReseñaGoogle } from '@/types/directorio';
 import { supabase } from '@/integrations/supabase/client';
 
 const RUBRO_LABELS: Record<string, string> = {
