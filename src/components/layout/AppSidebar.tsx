@@ -32,6 +32,7 @@ import {
   HelpCircle,
   Zap,
   BarChart2,
+  CheckSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ const menuItems = [
   { title: 'Asistente IA', url: '/ia', icon: Sparkles, module: 'ia' },
   { title: 'Simulador de Rinde', url: '/simulador', icon: Calculator, module: 'simulador' },
   { title: 'Noticias del sector', url: '/noticias', icon: Newspaper, module: 'noticias' },
+  { title: 'Mis tareas', url: '/mis-tareas', icon: CheckSquare, module: 'dashboard' },
 ];
 
 const extraItems = [
