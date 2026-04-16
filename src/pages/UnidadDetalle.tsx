@@ -89,10 +89,14 @@ export default function UnidadDetalle() {
     fechaInicio: new Date().toISOString().split('T')[0],
   });
 
-  const obra = mockObras.find((o) => o.id === obraId);
-  const unidad = mockUnidades.find((u) => u.id === unidadId);
-  const complementos = mockComplementos.filter((c) => c.unidadId === unidadId);
-  const compradores = mockCompradores.filter((c) => c.unidadId === unidadId);
+  const { data: obra } = useObra(obraId);
+  const { data: unidad } = useUnidad(unidadId);
+  const { data: complementosData } = useComplementos(unidadId);
+  const { data: compradoresData } = useCompradores(unidadId);
+  const { data: clientesData } = useClientes();
+  const complementos = complementosData || [];
+  const compradores = compradoresData || [];
+  const clientes = clientesData || [];
 
   const { planPago, cuotas, crearPlan, registrarPago, calcularResumen } = usePlanPago(unidadId || '');
 
@@ -356,7 +360,7 @@ export default function UnidadDetalle() {
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>
                         <SelectContent>
-                          {mockClientes.map((cliente) => (
+                          {clientes.map((cliente) => (
                             <SelectItem key={cliente.id} value={cliente.id}>
                               {cliente.nombre}
                             </SelectItem>
@@ -405,8 +409,8 @@ export default function UnidadDetalle() {
                   </TableHeader>
                   <TableBody>
                     {compradores.map((comprador) => {
-                      const cliente = mockClientes.find(
-                        (c) => c.id === comprador.clienteId
+                      const cliente = clientes.find(
+                        (c) => c.id === comprador.cliente_id
                       );
                       return (
                         <TableRow key={comprador.id}>
