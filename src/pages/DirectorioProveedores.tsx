@@ -622,8 +622,40 @@ function DetallePanel({ p, onImportar, onReseña, onReportar, navigate }: {
         </div>
       ) : (
         <div className="text-center py-4">
-          <p className="text-sm text-muted-foreground">Sin reseñas todavía.</p>
+          <p className="text-sm text-muted-foreground">Sin reseñas de la comunidad todavía.</p>
           <p className="text-xs text-muted-foreground">¿Trabajaste con ellos? Sé el primero en dejar una reseña.</p>
+        </div>
+      )}
+
+      {/* Google Reviews */}
+      {p.reseñasGoogle && p.reseñasGoogle.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+            <span className="text-yellow-500">★</span> Reseñas de Google
+            {p.ratingGoogle && <span className="text-xs text-muted-foreground">({p.ratingGoogle.toFixed(1)}/5{p.cantidadReseñasGoogle ? ` · ${p.cantidadReseñasGoogle} reseñas` : ''})</span>}
+          </h4>
+          <div className="space-y-2">
+            {p.reseñasGoogle.slice(0, 5).map((r, idx) => (
+              <div key={idx} className="bg-background rounded-lg p-3 border border-yellow-500/20">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    {r.autorNombre && <span className="text-sm font-medium">{r.autorNombre}</span>}
+                    {r.fecha && <span className="text-xs text-muted-foreground">{r.fecha}</span>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {r.rating && <span className="text-xs text-yellow-500">{renderStars(Math.round(r.rating))}</span>}
+                    <Badge variant="outline" className="text-[9px] py-0 px-1">Google</Badge>
+                  </div>
+                </div>
+                <p className="text-sm mt-1">{r.comentario}</p>
+                {r.fuenteUrl && (
+                  <a href={r.fuenteUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-0.5 mt-1">
+                    <ExternalLink className="h-3 w-3" />Ver fuente
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
