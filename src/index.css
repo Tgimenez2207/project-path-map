@@ -210,5 +210,7 @@
   .resultados-col { width: 100% !important; max-width: 100% !important; }
   .main-content { margin: 0 !important; padding: 0 !important; }
   .print\\:block { display: block !important; }
+  .print\\:hidden { display: none !important; }
   body { background: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  [data-sidebar], nav, header { display: none !important; }
 }
