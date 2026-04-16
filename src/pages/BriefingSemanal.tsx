@@ -105,24 +105,15 @@ export default function BriefingSemanal() {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       }),
       usuario: nombreUsuario,
-      obras: obrasActivas.map(o => ({
+      obras: obrasActivas.map((o: any) => ({
         nombre: o.nombre, progreso: o.progreso, estado: o.estado,
-        presupuesto: o.presupuestoTotal, moneda: o.moneda,
+        presupuesto: o.presupuesto_total, moneda: o.moneda,
       })),
       etapas: (dbEtapas || []).map((e: any) => ({ nombre: e.nombre, estado: e.estado, obraId: e.obra_id })),
       tareasEnRutaCritica: [],
       clientesEnRiesgo: [],
-      tareasEnRutaCritica: tareasEnRutaCritica.map(t => ({
-        nombre: t.nombre, avance: t.avance, responsable: t.responsable,
-        diasSinMover: Math.floor(Math.random() * 7) + 1,
-      })),
-      clientesEnRiesgo: clientesRiesgo.map(c => ({
-        nombre: c.nombre || c.razonSocial,
-        score: c.scoreIA?.scoreGlobal,
-        probPago: c.scoreIA?.probabilidadPagoTiempo,
-      })),
-      proveedoresPendientes: proveedoresPendientes.map(p => ({
-        nombre: p.razonSocial,
+      proveedoresPendientes: proveedoresPendientes.map((p: any) => ({
+        nombre: p.razon_social,
         montoPendiente: Math.floor(Math.random() * 80000) + 20000,
       })),
     };
@@ -161,7 +152,7 @@ export default function BriefingSemanal() {
   };
 
   // No data state
-  if (!isLoading && !briefing && mockObras.filter(o => o.estado === 'en_curso').length === 0) {
+  if (!isLoading && !briefing && historial.length === 0) {
     return (
       <div className="p-6 max-w-4xl mx-auto text-center py-20">
         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
