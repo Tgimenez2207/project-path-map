@@ -284,6 +284,63 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Recordatorios de Hoy + Últimas Notas */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2"><CalendarClock className="h-5 w-5 text-primary" />Recordatorios de Hoy</CardTitle>
+            <Link to="/calendario"><Button variant="ghost" size="sm">Ver calendario <ArrowUpRight className="h-4 w-4 ml-1" /></Button></Link>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {eventosHoy.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">📅 No tenés eventos para hoy</p>
+            ) : (
+              eventosHoy.map((ev) => (
+                <div key={ev.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                  <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: ev.color || 'hsl(var(--primary))' }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{ev.titulo}</p>
+                    {ev.descripcion && <p className="text-xs text-muted-foreground truncate">{ev.descripcion}</p>}
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(ev.fecha_inicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2"><StickyNote className="h-5 w-5 text-warning" />Últimas Notas</CardTitle>
+            <Link to="/notas"><Button variant="ghost" size="sm">Ver todas <ArrowUpRight className="h-4 w-4 ml-1" /></Button></Link>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {notasRecientes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">📝 No tenés notas aún</p>
+            ) : (
+              notasRecientes.map((nota) => (
+                <Link key={nota.id} to="/notas">
+                  <div className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer">
+                    <div className="h-8 w-8 rounded shrink-0 mt-0.5" style={{ backgroundColor: nota.color || '#fbbf24' }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{nota.titulo}</p>
+                        {nota.fijada && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Fijada</Badge>}
+                      </div>
+                      {nota.contenido && <p className="text-xs text-muted-foreground line-clamp-1">{nota.contenido}</p>}
+                      <p className="text-[10px] text-muted-foreground mt-1">{new Date(nota.updated_at).toLocaleDateString('es-AR')}</p>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Obras en Curso */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
