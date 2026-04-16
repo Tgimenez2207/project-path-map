@@ -279,3 +279,30 @@ export function useStockAlerts() {
     },
   });
 }
+
+export function useMateriales(soloTerminaciones?: boolean) {
+  return useQuery({
+    queryKey: ['materiales', soloTerminaciones],
+    queryFn: async () => {
+      let q = supabase.from('productos').select('*, proveedores(razon_social)');
+      if (soloTerminaciones) q = q.eq('es_terminacion', true);
+      const { data, error } = await q.order('nombre');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useSeleccionesTerminacion(unidadId?: string) {
+  return useQuery({
+    queryKey: ['selecciones_terminacion', unidadId],
+    queryFn: async () => {
+      let q = supabase.from('selecciones_terminacion').select('*, productos(nombre, foto_url, precio_referencia, moneda, categoria), clientes(nombre, apellido)');
+      if (unidadId) q = q.eq('unidad_id', unidadId);
+      const { data, error } = await q.order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: unidadId ? true : undefined,
+  });
+}
