@@ -150,6 +150,9 @@ export default function DirectorioProveedores() {
         yaImportado: false,
         guardado: false,
         fuenteUrl: p.fuenteUrl || p.web || undefined,
+        ratingGoogle: p.ratingGoogle || undefined,
+        cantidadReseñasGoogle: p.cantidadReseñasGoogle || undefined,
+        reseñasGoogle: p.reseñasGoogle || [],
       }));
       setResultadosIA(resultados);
       if (!resultados.length) toast({ title: 'No se encontraron resultados. Probá con otro término.' });
