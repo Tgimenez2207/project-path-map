@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Users, Star, Sparkles, BarChart3, Plus, RefreshCw,
   AlertTriangle, Lightbulb, CheckCircle, XCircle,
@@ -79,7 +79,68 @@ const getSegmento = (score: number, tieneDatos: boolean): ScoreIA['segmento'] =>
 // ─── Main Component ───
 export default function Clientes() {
   const { toast } = useToast();
-  const [clientes, setClientes] = useState<Cliente[]>(mockClientesScoring);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [dbLoaded, setDbLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadClientes = async () => {
+      try {
+        const { data: dbClientes } = await supabase.from('clientes').select('*').order('nombre');
+        const { data: dbPagos } = await supabase.from('pagos_clientes').select('*');
+        const { data: dbInteracciones } = await supabase.from('interacciones_clientes').select('*');
+        const { data: dbEvaluaciones } = await supabase.from('evaluaciones_clientes').select('*');
+        
+        if (dbClientes && dbClientes.length > 0) {
+          const mapped: Cliente[] = dbClientes.map((c: any) => ({
+            id: c.id,
+            tipo: (c.tipo_cliente_app || (c.tipo === 'persona' ? 'comprador_unidad' : 'empresa_contratante')) as TipoCliente,
+            nombre: c.nombre || '',
+            apellido: c.apellido || '',
+            dni: c.dni || c.documento || '',
+            razonSocial: c.nombre || '',
+            cuit: c.cuit || c.documento || '',
+            rubro: c.rubro || '',
+            email: c.email || '',
+            telefono: c.telefono || '',
+            ciudad: c.ciudad || c.direccion || '',
+            provincia: c.provincia || '',
+            estado: (c.estado_cliente || 'activo') as any,
+            obrasRelacionadas: [],
+            unidadesCompradas: c.unidades_compradas || 0,
+            montoTotalOperado: Number(c.monto_total_operado) || 0,
+            moneda: (c.moneda_operado || 'USD') as 'USD' | 'ARS',
+            pagos: (dbPagos || []).filter((p: any) => p.cliente_id === c.id).map((p: any) => ({
+              id: p.id, fecha: p.fecha, monto: Number(p.monto), moneda: p.moneda,
+              concepto: p.concepto, pagadoEnFecha: p.pagado_en_fecha, diasDemora: p.dias_demora,
+              obraNombre: p.obra_nombre,
+            })),
+            interacciones: (dbInteracciones || []).filter((i: any) => i.cliente_id === c.id).map((i: any) => ({
+              id: i.id, fecha: i.fecha, tipo: i.tipo, descripcion: i.descripcion,
+              resolucion: i.resolucion, autor: i.autor, obraNombre: i.obra_nombre, tono: i.tono,
+            })),
+            evaluaciones: (dbEvaluaciones || []).filter((e: any) => e.cliente_id === c.id).map((e: any) => ({
+              id: e.id, fecha: e.fecha, obraNombre: e.obra_nombre, autor: e.autor,
+              puntualidadPagos: e.puntualidad_pagos, comunicacion: e.comunicacion,
+              flexibilidad: e.flexibilidad, cumplimientoAcuerdos: e.cumplimiento_acuerdos,
+              recomendaria: e.recomendaria, comentario: e.comentario,
+            })),
+            scoreIA: c.score_ia ? c.score_ia as ScoreIA : undefined,
+            notas: c.notas || '',
+            creadoEn: c.created_at?.split('T')[0] || '',
+          }));
+          setClientes(mapped);
+          setDbLoaded(true);
+        } else {
+          setClientes(mockClientesScoring);
+          setDbLoaded(true);
+        }
+      } catch {
+        setClientes(mockClientesScoring);
+        setDbLoaded(true);
+      }
+    };
+    loadClientes();
+  }, []);
   const [busqueda, setBusqueda] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<TipoCliente | 'todos'>('todos');
   const [filtroEstado, setFiltroEstado] = useState<EstadoCliente | 'todos'>('todos');

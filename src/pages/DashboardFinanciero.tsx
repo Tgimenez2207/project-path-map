@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import {
   ArrowUpRight, ArrowDownRight, RefreshCw, Building2, CheckCircle, Clock, Filter,
 } from 'lucide-react';
 import type {
-  PeriodoFinanciero, ResumenFinanciero, AnalisisIAFinanciero,
+  PeriodoFinanciero, ResumenFinanciero, AnalisisIAFinanciero, MovimientoCaja, FlujoCajaMes,
 } from '@/types/finanzas';
 import {
   mockMovimientos, mockFlujoCaja, mockRentabilidad, mockDesgloseCostos,
@@ -27,7 +27,30 @@ export default function DashboardFinanciero() {
   const [analisisIA, setAnalisisIA] = useState<AnalisisIAFinanciero | null>(null);
   const [isLoadingIA, setIsLoadingIA] = useState(false);
   const [tabActiva, setTabActiva] = useState('overview');
-  const [movimientos, setMovimientos] = useState(mockMovimientos);
+  const [movimientos, setMovimientos] = useState<MovimientoCaja[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await supabase.from('movimientos_tesoreria').select('*').order('fecha', { ascending: false });
+        if (data && data.length > 0) {
+          const mapped: MovimientoCaja[] = data.map((m: any) => ({
+            id: m.id, fecha: m.fecha, tipo: m.tipo === 'ingreso' ? 'cobro' : 'pago',
+            concepto: m.descripcion, monto: Number(m.monto), moneda: m.moneda as 'USD' | 'ARS',
+            obraId: m.obra_id, obraNombre: m.obra_nombre || '',
+            contraparte: m.creado_por || '', pagado: m.conciliado,
+            vencimiento: m.fecha,
+          }));
+          setMovimientos(mapped);
+        } else {
+          setMovimientos(mockMovimientos);
+        }
+      } catch {
+        setMovimientos(mockMovimientos);
+      }
+    };
+    load();
+  }, []);
 
   // Movimientos filters
   const [filtroTipoMov, setFiltroTipoMov] = useState<'todos' | 'cobro' | 'pago'>('todos');

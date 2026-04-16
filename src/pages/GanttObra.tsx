@@ -28,15 +28,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const zooms = [
   { label: 'Meses', dayPx: 1.5 },
   { label: 'Semanas', dayPx: 3 },
-  { label: 'Días', dayPx: 6 },
+  { label: 'Días', dayPx: 8 },
 ];
 
-const ROW_H = 40;
-const LEFT_COL = 260;
-
-const getBarColor = (nodo: NodoGantt): string => {
-  if (nodo.critica) return 'hsl(var(--destructive))';
-  if (nodo.tipo === 'etapa') return 'hsl(var(--primary))';
+const getBarColor = (nodo: NodoGantt) => {
+  if (nodo.estado === 'completada') return 'hsl(142 72% 29%)';
+  if (nodo.critica) return 'hsl(0 84% 60%)';
+  if (nodo.tipo === 'etapa') return 'hsl(var(--primary, 24 95% 53%))';
   if (nodo.tipo === 'subetapa') return 'hsl(210 60% 45%)';
   return 'hsl(var(--warning, 38 92% 50%))';
 };
@@ -54,7 +52,32 @@ export default function GanttObra() {
   const isMobile = useIsMobile();
   const { data: obra, isLoading } = useObra(obraId);
 
-  const [nodos, setNodos] = useState<NodoGantt[]>(mockGantt);
+  const [nodos, setNodos] = useState<NodoGantt[]>([]);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!obraId) { setNodos(mockGantt); return; }
+      try {
+        const { data } = await supabase.from('nodos_gantt').select('*').eq('obra_id', obraId).order('orden');
+        if (data && data.length > 0) {
+          const mapped: NodoGantt[] = data.map((n: any) => ({
+            id: n.id, obraId: n.obra_id, tipo: n.tipo as TipoNodo,
+            nombre: n.nombre, inicioOffset: n.inicio, duracion: n.duracion,
+            avance: n.avance, responsable: n.responsable || '',
+            estado: n.estado as EstadoNodo, critica: n.critica || false,
+            parentId: n.parent_id, depDe: (n.dependencias || [])[0],
+            children: data.filter((c: any) => c.parent_id === n.id).map((c: any) => c.id),
+          }));
+          setNodos(mapped);
+        } else {
+          setNodos(mockGantt);
+        }
+      } catch {
+        setNodos(mockGantt);
+      }
+    };
+    load();
+  }, [obraId]);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [zoomIdx, setZoomIdx] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -62,6 +85,9 @@ export default function GanttObra() {
   const [editingNodo, setEditingNodo] = useState<NodoGantt | null>(null);
   const [isLoadingIA, setIsLoadingIA] = useState(false);
   const [analisisIA, setAnalisisIA] = useState<string | null>(null);
+
+  const ROW_H = 40;
+  const LEFT_COL = 280;
 
   // New nodo form state
   const [formNombre, setFormNombre] = useState('');

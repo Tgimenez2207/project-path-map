@@ -14,10 +14,7 @@ import {
   Users, DollarSign, History, ChevronRight, ArrowUpDown,
 } from 'lucide-react';
 import type { BriefingData } from '@/types/briefing';
-import { mockObras, mockEtapas, mockTareas } from '@/data/mockObras';
-import { mockGantt } from '@/data/mockGantt';
-import { mockClientesScoring } from '@/data/mockClientesScoring';
-import { mockProveedores } from '@/data/mockProveedores';
+import { supabase as sbClient } from '@/integrations/supabase/client';
 
 interface BriefingRecord {
   id: string;
@@ -95,32 +92,28 @@ export default function BriefingSemanal() {
     setIsLoading(true);
     setBriefing(null);
 
-    const obrasActivas = mockObras.filter(o => o.estado === 'en_curso');
-    const tareasEnRutaCritica = mockGantt.filter(n => n.critica && n.avance < 100);
-    const clientesRiesgo = mockClientesScoring.filter(c => c.scoreIA && c.scoreIA.scoreGlobal < 50);
-    const proveedoresPendientes = mockProveedores.filter(p => p.estado === 'activo').slice(0, 3);
+    // Load data from DB instead of mocks
+    const { data: dbObras } = await sbClient.from('obras').select('*');
+    const { data: dbEtapas } = await sbClient.from('etapas').select('*');
+    const { data: dbProveedores } = await sbClient.from('proveedores').select('*');
+    
+    const obrasActivas = (dbObras || []).filter((o: any) => o.estado === 'en_curso');
+    const proveedoresPendientes = (dbProveedores || []).filter((p: any) => p.activo).slice(0, 3);
 
     const contexto = {
       fecha: new Date().toLocaleDateString('es-AR', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       }),
       usuario: nombreUsuario,
-      obras: obrasActivas.map(o => ({
+      obras: obrasActivas.map((o: any) => ({
         nombre: o.nombre, progreso: o.progreso, estado: o.estado,
-        presupuesto: o.presupuestoTotal, moneda: o.moneda,
+        presupuesto: o.presupuesto_total, moneda: o.moneda,
       })),
-      etapas: mockEtapas.map(e => ({ nombre: e.nombre, estado: e.estado, obraId: e.obraId })),
-      tareasEnRutaCritica: tareasEnRutaCritica.map(t => ({
-        nombre: t.nombre, avance: t.avance, responsable: t.responsable,
-        diasSinMover: Math.floor(Math.random() * 7) + 1,
-      })),
-      clientesEnRiesgo: clientesRiesgo.map(c => ({
-        nombre: c.nombre || c.razonSocial,
-        score: c.scoreIA?.scoreGlobal,
-        probPago: c.scoreIA?.probabilidadPagoTiempo,
-      })),
-      proveedoresPendientes: proveedoresPendientes.map(p => ({
-        nombre: p.razonSocial,
+      etapas: (dbEtapas || []).map((e: any) => ({ nombre: e.nombre, estado: e.estado, obraId: e.obra_id })),
+      tareasEnRutaCritica: [],
+      clientesEnRiesgo: [],
+      proveedoresPendientes: proveedoresPendientes.map((p: any) => ({
+        nombre: p.razon_social,
         montoPendiente: Math.floor(Math.random() * 80000) + 20000,
       })),
     };
@@ -159,7 +152,7 @@ export default function BriefingSemanal() {
   };
 
   // No data state
-  if (!isLoading && !briefing && mockObras.filter(o => o.estado === 'en_curso').length === 0) {
+  if (!isLoading && !briefing && historial.length === 0) {
     return (
       <div className="p-6 max-w-4xl mx-auto text-center py-20">
         <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
