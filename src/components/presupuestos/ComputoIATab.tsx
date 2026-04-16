@@ -132,14 +132,6 @@ export default function ComputoIA() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Calculator className="h-6 w-6 text-primary" />
-          Cómputo y Presupuesto con IA
-        </h1>
-        <p className="text-muted-foreground mt-1">Generá estimaciones de costos por rubros usando inteligencia artificial y precios de mercado argentino.</p>
-      </div>
 
       {/* Input form */}
       <Card>

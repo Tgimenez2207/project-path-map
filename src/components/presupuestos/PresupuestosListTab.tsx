@@ -159,11 +159,7 @@ export default function Presupuestos() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Presupuestos</h1>
-          <p className="text-muted-foreground">Gestión de presupuestos y cotizaciones ({presupuestos.length} total)</p>
-        </div>
+        <div className="flex items-center justify-between">
         <Button onClick={openCreate} className="gap-2">
           <Plus className="h-4 w-4" /> Nuevo Presupuesto
         </Button>
