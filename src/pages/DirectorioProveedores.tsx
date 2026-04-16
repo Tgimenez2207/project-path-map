@@ -501,7 +501,7 @@ function ProveedorCard({ p, isOpen, onToggle, onImportar, onGuardar, onReseña }
               <Badge variant="outline" className="text-[10px]">{RUBRO_LABELS[p.rubro] || p.rubro}</Badge>
               <Badge className={`text-[10px] ${disp.color} border-0`}>{disp.label}</Badge>
             </div>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               {rating > 0 && (
                 <span className="text-xs">
                   <span className="text-yellow-500">{renderStars(rating)}</span>{' '}
@@ -509,7 +509,15 @@ function ProveedorCard({ p, isOpen, onToggle, onImportar, onGuardar, onReseña }
                   <span className="text-muted-foreground">({p.reseñas.length})</span>
                 </span>
               )}
-              {rating === 0 && <span className="text-xs text-muted-foreground">Sin reseñas</span>}
+              {p.ratingGoogle && (
+                <span className="text-xs flex items-center gap-1">
+                  <span className="text-yellow-500">★</span>
+                  <span className="font-medium">{p.ratingGoogle.toFixed(1)}</span>
+                  {p.cantidadReseñasGoogle && <span className="text-muted-foreground">({p.cantidadReseñasGoogle})</span>}
+                  <Badge variant="outline" className="text-[9px] py-0 px-1">Google</Badge>
+                </span>
+              )}
+              {rating === 0 && !p.ratingGoogle && <span className="text-xs text-muted-foreground">Sin reseñas</span>}
             </div>
             <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
               <MapPin className="h-3 w-3" />{p.ciudad}, {p.provincia}
