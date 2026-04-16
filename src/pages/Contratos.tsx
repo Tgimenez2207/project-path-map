@@ -15,8 +15,9 @@ import { toast } from 'sonner';
 import {
   FileSignature, Plus, Search, Filter, Building2, Calendar,
   Clock, CheckCircle, DollarSign, FileText,
-  Copy, ChevronRight, Users, Milestone,
+  Copy, ChevronRight, Users, Milestone, Download,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import type { TipoContrato, EstadoContrato, PlantillaContrato, HitoContractual, Parte } from '@/types/contratos';
 
@@ -372,10 +373,15 @@ export default function Contratos() {
                   <SheetTitle className="text-left text-lg leading-tight">{c.titulo}</SheetTitle>
                 </SheetHeader>
 
-                <div className="flex flex-wrap gap-2">
-                  <Badge className={estadoConfig[c.estado]?.color}>{estadoConfig[c.estado]?.label}</Badge>
-                  <Badge variant="secondary">{tipoLabels[c.tipo]}</Badge>
-                  {c.obra_nombre && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Building2 className="h-3 w-3 mr-1" />{c.obra_nombre}</Badge>}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className={estadoConfig[c.estado]?.color}>{estadoConfig[c.estado]?.label}</Badge>
+                    <Badge variant="secondary">{tipoLabels[c.tipo]}</Badge>
+                    {c.obra_nombre && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><Building2 className="h-3 w-3 mr-1" />{c.obra_nombre}</Badge>}
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => generarPDF(c)}>
+                    <Download className="h-3.5 w-3.5" /> PDF
+                  </Button>
                 </div>
 
                 <Tabs defaultValue="general">
