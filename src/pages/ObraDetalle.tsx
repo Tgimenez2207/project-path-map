@@ -233,7 +233,7 @@ export default function ObraDetalle() {
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-6">
-          <div className="empty-state"><FileText className="empty-state-icon" /><h3 className="empty-state-title">Sin documentos</h3><Button className="mt-4"><Plus className="h-4 w-4 mr-2" />Subir documento</Button></div>
+          <DocumentosTab obraId={obraId!} />
         </TabsContent>
 
         <TabsContent value="contratistas" className="mt-6">
