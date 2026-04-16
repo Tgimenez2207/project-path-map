@@ -13,6 +13,7 @@ import { useObra, useEtapas, useTareas, useBitacora, useUnidades } from '@/hooks
 import { useProveedores } from '@/hooks/useSupabaseData';
 import IACopilotTab from '@/components/obra/IACopilotTab';
 import MarketingDialog from '@/components/obra/MarketingDialog';
+import DocumentosTab from '@/components/obra/DocumentosTab';
 
 const estadoLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   planificacion: { label: 'Planificación', variant: 'secondary' },
