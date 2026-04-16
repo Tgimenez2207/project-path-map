@@ -65,6 +65,13 @@ export default function Presupuestos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Rubros for view dialog
+  const [rubros, setRubros] = useState<any[]>([]);
+  const [loadingRubros, setLoadingRubros] = useState(false);
+  const { data: proveedores = [] } = useProveedores();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialog, setViewDialog] = useState<any>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
