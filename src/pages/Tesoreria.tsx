@@ -222,18 +222,57 @@ const Tesoreria = () => {
     setIsLoadingIA(true);
     setAnalisisIA(null);
     try {
+      const netoARS = totalIngresosMes.ars - totalEgresosMes.ars;
+      const netoUSD = totalIngresosMes.usd - totalEgresosMes.usd;
+      const totalFijosARS = costosFijos.filter(c => c.activo && c.moneda === 'ARS').reduce((a, c) => a + c.monto, 0);
+      const totalFijosUSD = costosFijos.filter(c => c.activo && c.moneda === 'USD').reduce((a, c) => a + c.monto, 0);
+      const sinConciliar = movimientos.filter(m => !m.conciliado).length;
+
+      const chequesPropios = chequesProximosAVencer.filter(c => c.tipo === 'propio');
+      const chequesTerceros = chequesProximosAVencer.filter(c => c.tipo === 'terceros');
+
+      const prompt = `Analizá esta situación financiera de la constructora:
+
+POSICIÓN DE CAJA:
+${saldosPorCuenta.map(c => `- ${c.nombre}: ${c.moneda} ${c.saldo.toLocaleString('es-AR')}`).join('\n')}
+Total ARS: ${saldoTotalARS.toLocaleString('es-AR')}
+Total USD: ${saldoTotalUSD.toLocaleString('es-AR')}
+
+FLUJO DEL MES ACTUAL:
+Ingresos ARS: ${totalIngresosMes.ars.toLocaleString('es-AR')} | Egresos ARS: ${totalEgresosMes.ars.toLocaleString('es-AR')} | Neto: ${netoARS >= 0 ? '+' : ''}${netoARS.toLocaleString('es-AR')}
+Ingresos USD: ${totalIngresosMes.usd.toLocaleString('es-AR')} | Egresos USD: ${totalEgresosMes.usd.toLocaleString('es-AR')} | Neto: ${netoUSD >= 0 ? '+' : ''}${netoUSD.toLocaleString('es-AR')}
+
+CHEQUES PRÓXIMOS A VENCER (15 días):
+${chequesProximosAVencer.length === 0 ? 'Ninguno' : chequesProximosAVencer.map(c => {
+  const dias = Math.ceil((new Date(c.fechaVencimiento).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  return `- ${c.tipo === 'propio' ? 'PROPIO (salida)' : 'TERCERO (entrada)'}: ${c.moneda} ${c.monto.toLocaleString('es-AR')} — vence en ${dias} días — ${c.banco} Nº${c.numero}`;
+}).join('\n')}
+Resumen: ${chequesPropios.length} propios (compromiso de pago), ${chequesTerceros.length} de terceros (activo a cobrar)
+
+COSTOS FIJOS MENSUALES:
+Total ARS: ${totalFijosARS.toLocaleString('es-AR')}/mes | Total USD: ${totalFijosUSD.toLocaleString('es-AR')}/mes
+Detalle:
+${costosFijos.filter(c => c.activo).map(c => `- ${c.descripcion}: ${c.moneda} ${c.monto.toLocaleString('es-AR')} (${c.frecuencia || 'único'})`).join('\n')}
+
+CONCILIACIÓN BANCARIA:
+${sinConciliar} movimientos sin conciliar de un total de ${movimientos.length}`;
+
       const { data, error } = await supabase.functions.invoke('ai-finanzas', {
         body: {
-          messages: [{
-            role: 'user',
-            content: `Analizá esta situación financiera:\n\nPOSICIÓN:\n${saldosPorCuenta.map(c => `${c.nombre}: ${c.moneda} ${c.saldo.toLocaleString()}`).join('\n')}\nTotal ARS: ${saldoTotalARS.toLocaleString()} | USD: ${saldoTotalUSD.toLocaleString()}\n\nFLUJO MES:\nIngresos ARS: ${totalIngresosMes.ars.toLocaleString()} | Egresos: ${totalEgresosMes.ars.toLocaleString()}\nIngresos USD: ${totalIngresosMes.usd.toLocaleString()} | Egresos: ${totalEgresosMes.usd.toLocaleString()}\n\nCHEQUES POR VENCER: ${chequesProximosAVencer.length}\nCOSTOS FIJOS ARS/mes: ${costosFijos.filter(c => c.activo && c.moneda === 'ARS').reduce((a, c) => a + c.monto, 0).toLocaleString()}\nSIN CONCILIAR: ${movimientos.filter(m => !m.conciliado).length}`,
-          }],
+          messages: [{ role: 'user', content: prompt }],
         },
       });
+
       if (error) throw error;
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
       setAnalisisIA(data?.texto || 'Análisis no disponible');
-    } catch {
-      setAnalisisIA(`📊 Resumen financiero\n\n✅ Posición: ARS ${saldoTotalARS.toLocaleString('es-AR')} + USD ${saldoTotalUSD.toLocaleString('es-AR')}\n⚠️ ${chequesProximosAVencer.length} cheques por vencer\n💡 ${movimientos.filter(m => !m.conciliado).length} movimientos sin conciliar`);
+    } catch (err: any) {
+      console.error('Error en análisis IA:', err);
+      setAnalisisIA(`📊 Resumen financiero automático\n\n✅ Posición: ARS ${saldoTotalARS.toLocaleString('es-AR')} + USD ${saldoTotalUSD.toLocaleString('es-AR')}\n⚠️ ${chequesProximosAVencer.length} cheques por vencer en 15 días\n💡 ${movimientos.filter(m => !m.conciliado).length} movimientos sin conciliar\n\n⚠️ No se pudo conectar con el modelo de IA. Se muestra un resumen básico.`);
     } finally {
       setIsLoadingIA(false);
     }
