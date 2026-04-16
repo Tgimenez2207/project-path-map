@@ -43,4 +43,5 @@ export interface ProveedorDirectorio {
   reseñas: ReseñaDirectorio[];
   yaImportado: boolean;
   guardado: boolean;
+  fuenteUrl?: string;
 }
