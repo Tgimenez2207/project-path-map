@@ -703,6 +703,8 @@ export default function ComputoIA() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+      </Tabs>
 
       {/* Convert to Presupuesto Dialog */}
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
