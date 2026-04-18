@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Clock, MapPin, User, List, CalendarDays } from 'lucide-react';
+import { Plus, Clock, MapPin, User, List, CalendarDays, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { useGremios } from '@/contexts/GremiosContext';
 import GremiosCalendario from '@/components/gremios/GremiosCalendario';
 import type { TurnoAgenda } from '@/types/gremios';
@@ -35,10 +38,11 @@ function formatDia(iso: string): string {
 const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 1280;
 
 export default function GremiosAgenda() {
-  const { turnos, setTurnos } = useGremios();
+  const { turnos, setTurnos, actualizarTurno, eliminarTurno } = useGremios();
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [vistaDesktop, setVistaDesktop] = useState<'calendario' | 'lista'>('calendario');
-  const [form, setForm] = useState({
+  const initialForm = {
     titulo: '',
     cliente: '',
     direccion: '',
@@ -47,15 +51,44 @@ export default function GremiosAgenda() {
     tipo: 'trabajo' as TurnoAgenda['tipo'],
     duracionMinutos: 60,
     notas: '',
-  });
+  };
+  const [form, setForm] = useState(initialForm);
 
   const moverTurno = (id: string, nuevaFecha: string) => {
     setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, fecha: nuevaFecha } : t)));
   };
 
   const seleccionarDia = (fecha: string) => {
-    setForm((p) => ({ ...p, fecha }));
+    setEditId(null);
+    setForm({ ...initialForm, fecha });
     setShowForm(true);
+  };
+
+  const abrirEditarTurno = (t: TurnoAgenda) => {
+    setEditId(t.id);
+    setForm({
+      titulo: t.titulo,
+      cliente: t.cliente ?? '',
+      direccion: t.direccion ?? '',
+      fecha: t.fecha,
+      hora: t.hora,
+      tipo: t.tipo,
+      duracionMinutos: t.duracionMinutos,
+      notas: t.notas ?? '',
+    });
+    setShowForm(true);
+  };
+
+  const eliminarTurnoAction = (id: string) => {
+    if (!confirm('¿Eliminar este turno?')) return;
+    eliminarTurno(id);
+    toast.success('Turno eliminado');
+  };
+
+  const cerrarForm = () => {
+    setShowForm(false);
+    setEditId(null);
+    setForm(initialForm);
   };
 
   const turnosPorDia = useMemo(() => {
