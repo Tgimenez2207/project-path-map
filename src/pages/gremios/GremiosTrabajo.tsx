@@ -45,6 +45,14 @@ export default function GremiosTrabajo() {
   const [trabajos, setTrabajos] = useState<TrabajoGremio[]>(mockTrabajos);
   const [showForm, setShowForm] = useState(false);
   const [filtro, setFiltro] = useState<'todos' | EstadoCobro>('todos');
+  const [detalleId, setDetalleId] = useState<string | null>(null);
+  const detalle = useMemo(() => trabajos.find((t) => t.id === detalleId) ?? null, [trabajos, detalleId]);
+
+  const agregarEntrada = (trabajoId: string, entrada: EntradaBitacora) => {
+    setTrabajos((prev) =>
+      prev.map((t) => (t.id === trabajoId ? { ...t, bitacora: [...(t.bitacora ?? []), entrada] } : t)),
+    );
+  };
 
   const [form, setForm] = useState({
     descripcion: '',
