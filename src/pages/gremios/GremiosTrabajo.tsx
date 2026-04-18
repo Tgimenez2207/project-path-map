@@ -227,7 +227,7 @@ export default function GremiosTrabajo() {
           const b = badgeFor(t);
           const color = t.estadoCobro === 'cobrado' ? 'text-emerald-600' : t.estadoCobro === 'vencido' ? 'text-red-600' : 'text-amber-600';
           return (
-            <Card key={t.id} className="p-4 space-y-2">
+            <Card key={t.id} className="p-4 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setDetalleId(t.id)}>
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-medium flex-1">{t.descripcion}</p>
                 <p className={`text-sm font-bold whitespace-nowrap ${color}`}>{fmt(t.monto)}</p>
@@ -235,9 +235,16 @@ export default function GremiosTrabajo() {
               <p className="text-xs text-muted-foreground">{t.cliente}</p>
               <p className="text-xs text-muted-foreground">{t.direccion}</p>
               <div className="flex items-center justify-between pt-1">
-                <Badge variant="outline" className={`text-[10px] ${b.cls}`}>{b.label}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={`text-[10px] ${b.cls}`}>{b.label}</Badge>
+                  {(t.bitacora?.length ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <BookOpen className="h-3 w-3" /> {t.bitacora!.length}
+                    </span>
+                  )}
+                </div>
                 {(t.estadoCobro === 'pendiente' || t.estadoCobro === 'vencido') && (
-                  <Button size="sm" variant="ghost" onClick={() => marcarCobrado(t.id)}>
+                  <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); marcarCobrado(t.id); }}>
                     Marcar como cobrado ✓
                   </Button>
                 )}
