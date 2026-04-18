@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Sparkles, Copy, Check, Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Sparkles, Copy, Check, Plus, FileDown, Copy as CopyIcon, Pencil, Trash2, ArrowRightCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockPresupuestos, mockPerfilGremio } from '@/data/mockGremios';
-import { getRubroLabel, type PresupuestoGremio } from '@/types/gremios';
+import { Switch } from '@/components/ui/switch';
+import { useGremios } from '@/contexts/GremiosContext';
+import { mockPerfilGremio } from '@/data/mockGremios';
+import { getRubroLabel, type PresupuestoGremio, type ItemPresupuesto } from '@/types/gremios';
 import { supabase } from '@/integrations/supabase/client';
+import { generarPresupuestoPDF } from '@/lib/gremiosPdf';
 
 const ESTADO_COLOR: Record<PresupuestoGremio['estado'], string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -22,40 +25,104 @@ const ESTADO_COLOR: Record<PresupuestoGremio['estado'], string> = {
 
 const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 1280;
 
+const initialForm = {
+  cliente: '',
+  telefono: '',
+  email: '',
+  descripcionTrabajo: '',
+  montoTotal: 0,
+  incluyeMateriales: true as boolean | 'por_separado',
+  condicionesPago: '50% adelanto, 50% al finalizar',
+  validezDias: 15,
+  iva: false,
+  items: [] as ItemPresupuesto[],
+};
+
 export default function GremiosPresupuesto() {
-  const [presupuestos, setPresupuestos] = useState<PresupuestoGremio[]>(mockPresupuestos);
+  const {
+    presupuestos, agregarPresupuesto, actualizarPresupuesto, eliminarPresupuesto,
+    duplicarPresupuesto, convertirEnTrabajo,
+  } = useGremios();
   const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [isGenerando, setIsGenerando] = useState(false);
   const [presupuestoGenerado, setPresupuestoGenerado] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [form, setForm] = useState({
-    cliente: '',
-    telefono: '',
-    email: '',
-    descripcionTrabajo: '',
-    montoTotal: 0,
-    incluyeMateriales: true as boolean | 'por_separado',
-    condicionesPago: '50% adelanto, 50% al finalizar',
-    validezDias: 15,
-  });
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<'todos' | PresupuestoGremio['estado']>('todos');
+  const [form, setForm] = useState(initialForm);
+
+  const subtotalItems = useMemo(
+    () => form.items.reduce((a, it) => a + it.cantidad * it.precioUnitario, 0),
+    [form.items],
+  );
+  const totalCalculado = useMemo(() => {
+    const base = form.items.length > 0 ? subtotalItems : form.montoTotal;
+    return form.iva ? base * 1.21 : base;
+  }, [form.items, form.iva, form.montoTotal, subtotalItems]);
+
+  const presupuestosFiltrados = useMemo(() => {
+    let res = presupuestos;
+    if (filtroEstado !== 'todos') res = res.filter((p) => p.estado === filtroEstado);
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase();
+      res = res.filter(
+        (p) => p.cliente.toLowerCase().includes(q) || p.descripcionTrabajo.toLowerCase().includes(q),
+      );
+    }
+    return [...res].sort((a, b) => b.fechaEmision.localeCompare(a.fechaEmision));
+  }, [presupuestos, busqueda, filtroEstado]);
 
   const resetForm = () => {
-    setForm({
-      cliente: '',
-      telefono: '',
-      email: '',
-      descripcionTrabajo: '',
-      montoTotal: 0,
-      incluyeMateriales: true,
-      condicionesPago: '50% adelanto, 50% al finalizar',
-      validezDias: 15,
-    });
+    setForm(initialForm);
     setPresupuestoGenerado(null);
+    setEditId(null);
+  };
+
+  const cerrarForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
+  const abrirEditar = (p: PresupuestoGremio) => {
+    setEditId(p.id);
+    setForm({
+      cliente: p.cliente,
+      telefono: p.telefono ?? '',
+      email: p.email ?? '',
+      descripcionTrabajo: p.descripcionTrabajo,
+      montoTotal: p.montoTotal,
+      incluyeMateriales: p.incluyeMateriales,
+      condicionesPago: p.condicionesPago,
+      validezDias: p.validezDias,
+      iva: p.iva ?? false,
+      items: p.items ?? [],
+    });
+    setPresupuestoGenerado(p.textoGenerado ?? null);
+    setShowForm(true);
+  };
+
+  const addItem = () => {
+    setForm((p) => ({
+      ...p,
+      items: [
+        ...p.items,
+        { id: crypto.randomUUID(), descripcion: '', cantidad: 1, unidad: 'u', precioUnitario: 0 },
+      ],
+    }));
+  };
+
+  const updateItem = (id: string, patch: Partial<ItemPresupuesto>) => {
+    setForm((p) => ({ ...p, items: p.items.map((it) => (it.id === id ? { ...it, ...patch } : it)) }));
+  };
+
+  const removeItem = (id: string) => {
+    setForm((p) => ({ ...p, items: p.items.filter((it) => it.id !== id) }));
   };
 
   const handleGenerar = async () => {
-    if (!form.cliente || !form.descripcionTrabajo || !form.montoTotal) {
-      toast.error('Completá cliente, trabajo y monto');
+    if (!form.cliente || !form.descripcionTrabajo || (totalCalculado <= 0 && form.items.length === 0)) {
+      toast.error('Completá cliente, trabajo y monto (o ítems)');
       return;
     }
     setIsGenerando(true);
@@ -70,7 +137,7 @@ export default function GremiosPresupuesto() {
             telefono: mockPerfilGremio.telefono,
             email: mockPerfilGremio.email,
           },
-          form,
+          form: { ...form, montoTotal: totalCalculado },
         },
       });
       if (error) throw error;
@@ -99,26 +166,60 @@ export default function GremiosPresupuesto() {
   };
 
   const handleGuardar = () => {
-    if (!presupuestoGenerado) return;
-    const nuevo: PresupuestoGremio = {
-      id: crypto.randomUUID(),
+    const datos: Omit<PresupuestoGremio, 'id' | 'fechaEmision' | 'estado'> = {
       cliente: form.cliente,
       email: form.email || undefined,
       telefono: form.telefono || undefined,
       descripcionTrabajo: form.descripcionTrabajo,
-      montoTotal: form.montoTotal,
+      montoTotal: totalCalculado,
       incluyeMateriales: form.incluyeMateriales,
       condicionesPago: form.condicionesPago,
       validezDias: form.validezDias,
-      fechaEmision: new Date().toISOString().slice(0, 10),
-      estado: 'borrador',
-      textoGenerado: presupuestoGenerado,
+      textoGenerado: presupuestoGenerado ?? undefined,
+      items: form.items.length > 0 ? form.items : undefined,
+      iva: form.iva,
     };
-    setPresupuestos((p) => [nuevo, ...p]);
-    toast.success('Presupuesto guardado');
-    setShowForm(false);
-    resetForm();
+    if (editId) {
+      actualizarPresupuesto(editId, datos);
+      toast.success('Presupuesto actualizado');
+    } else {
+      agregarPresupuesto({
+        id: crypto.randomUUID(),
+        fechaEmision: new Date().toISOString().slice(0, 10),
+        estado: 'borrador',
+        ...datos,
+      });
+      toast.success('Presupuesto guardado');
+    }
+    cerrarForm();
   };
+
+  const handlePDF = (p: PresupuestoGremio) => {
+    try {
+      generarPresupuestoPDF(p, mockPerfilGremio);
+      toast.success('PDF descargado');
+    } catch (e: any) {
+      toast.error('Error generando PDF');
+    }
+  };
+
+  const handleConvertir = (id: string) => {
+    const nid = convertirEnTrabajo(id);
+    if (nid) toast.success('Trabajo creado desde el presupuesto');
+  };
+
+  const cambiarEstado = (id: string, estado: PresupuestoGremio['estado']) => {
+    actualizarPresupuesto(id, { estado });
+    toast.success('Estado actualizado');
+  };
+
+  const eliminar = (id: string) => {
+    if (!confirm('¿Eliminar presupuesto?')) return;
+    eliminarPresupuesto(id);
+    toast.success('Presupuesto eliminado');
+  };
+
+  const fmt = (n: number) => `$${n.toLocaleString('es-AR')}`;
 
   const FormBody = (
     <div className="space-y-4 mt-4">
@@ -145,19 +246,89 @@ export default function GremiosPresupuesto() {
           <Input type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="cliente@mail.com" />
         </div>
       </div>
-      <div>
-        <label className="text-sm text-muted-foreground">Monto total</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-          <Input
-            type="number"
-            className="pl-7"
-            value={form.montoTotal || ''}
-            onChange={(e) => setForm((p) => ({ ...p, montoTotal: Number(e.target.value) }))}
-            placeholder="85000"
-          />
+
+      {/* Items detallados */}
+      <div className="border rounded-xl p-3 bg-muted/20 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Detalle por ítem (opcional)</p>
+            <p className="text-xs text-muted-foreground">Si lo dejás vacío, se usa el monto total que ingreses abajo</p>
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={addItem}>
+            <Plus className="h-3 w-3 mr-1" /> Ítem
+          </Button>
         </div>
+        {form.items.length > 0 && (
+          <div className="space-y-2">
+            {form.items.map((it) => (
+              <div key={it.id} className="grid grid-cols-12 gap-2 items-center">
+                <Input
+                  className="col-span-5"
+                  placeholder="Descripción"
+                  value={it.descripcion}
+                  onChange={(e) => updateItem(it.id, { descripcion: e.target.value })}
+                />
+                <Input
+                  className="col-span-2"
+                  type="number"
+                  placeholder="Cant"
+                  value={it.cantidad || ''}
+                  onChange={(e) => updateItem(it.id, { cantidad: Number(e.target.value) })}
+                />
+                <Input
+                  className="col-span-1"
+                  placeholder="u"
+                  value={it.unidad}
+                  onChange={(e) => updateItem(it.id, { unidad: e.target.value })}
+                />
+                <Input
+                  className="col-span-3"
+                  type="number"
+                  placeholder="Precio unit"
+                  value={it.precioUnitario || ''}
+                  onChange={(e) => updateItem(it.id, { precioUnitario: Number(e.target.value) })}
+                />
+                <Button size="icon" variant="ghost" className="col-span-1 h-8 w-8" onClick={() => removeItem(it.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            <p className="text-right text-sm text-muted-foreground">
+              Subtotal: <span className="font-semibold text-foreground">{fmt(subtotalItems)}</span>
+            </p>
+          </div>
+        )}
       </div>
+
+      {form.items.length === 0 && (
+        <div>
+          <label className="text-sm text-muted-foreground">Monto total</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+            <Input
+              type="number"
+              className="pl-7"
+              value={form.montoTotal || ''}
+              onChange={(e) => setForm((p) => ({ ...p, montoTotal: Number(e.target.value) }))}
+              placeholder="85000"
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between border rounded-lg p-3 bg-card">
+        <div>
+          <p className="text-sm font-medium">Sumar IVA 21%</p>
+          <p className="text-xs text-muted-foreground">Para emitir factura A o B</p>
+        </div>
+        <Switch checked={form.iva} onCheckedChange={(v) => setForm((p) => ({ ...p, iva: v }))} />
+      </div>
+
+      <div className="rounded-xl bg-foreground text-background p-4 flex items-center justify-between">
+        <span className="text-sm">Total a cobrar</span>
+        <span className="text-xl font-bold">{fmt(totalCalculado)}</span>
+      </div>
+
       <div>
         <label className="text-sm text-muted-foreground mb-2 block">¿Incluye materiales?</label>
         <div className="grid grid-cols-3 gap-2">
@@ -203,28 +374,34 @@ export default function GremiosPresupuesto() {
           </Select>
         </div>
       </div>
-      <Button className="w-full" size="lg" onClick={handleGenerar} disabled={isGenerando}>
-        <Sparkles className="h-4 w-4 mr-2" />
-        {isGenerando ? 'Generando...' : 'Generar presupuesto con IA'}
-      </Button>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" onClick={handleGuardar} disabled={!form.cliente || !form.descripcionTrabajo || totalCalculado <= 0}>
+          {editId ? 'Guardar cambios' : 'Guardar'}
+        </Button>
+        <Button onClick={handleGenerar} disabled={isGenerando}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          {isGenerando ? 'Generando...' : 'Generar texto IA'}
+        </Button>
+      </div>
     </div>
   );
 
   const ResultBody = (
     <div className="space-y-4 mt-4">
-      <Card className="p-4 xl:p-6 bg-muted/30 max-h-[60vh] overflow-y-auto">
+      <Card className="p-4 xl:p-6 bg-muted/30 max-h-[55vh] overflow-y-auto">
         <pre className="text-sm whitespace-pre-wrap font-sans">{presupuestoGenerado}</pre>
       </Card>
       <div className="grid xl:grid-cols-4 gap-2">
         <Button variant="outline" onClick={handleCopiar}>
           {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-          {copied ? 'Copiado' : 'Copiar texto'}
+          {copied ? 'Copiado' : 'Copiar'}
         </Button>
         <Button className="text-white" style={{ backgroundColor: '#25D366' }} onClick={handleWhatsApp}>
-          Compartir por WhatsApp
+          WhatsApp
         </Button>
         <Button variant="secondary" onClick={handleGuardar}>
-          Guardar
+          {editId ? 'Guardar cambios' : 'Guardar'}
         </Button>
         <Button variant="ghost" onClick={() => setPresupuestoGenerado(null)}>
           Volver a editar
@@ -239,76 +416,130 @@ export default function GremiosPresupuesto() {
         <div>
           <h1 className="text-xl xl:text-2xl font-bold">Presupuestos</h1>
           <p className="hidden xl:block text-sm text-muted-foreground mt-1">
-            Generá presupuestos profesionales con IA en segundos
+            Items, IVA, PDF, duplicar y convertir en trabajo — todo en un solo lugar
           </p>
         </div>
-        <Button className="hidden xl:inline-flex" onClick={() => setShowForm(true)}>
+        <Button className="hidden xl:inline-flex" onClick={() => { resetForm(); setShowForm(true); }}>
           <Plus className="h-4 w-4 mr-2" />
           Nuevo presupuesto
         </Button>
       </div>
 
       {/* Hero CTA */}
-      <Card className="p-5 xl:p-8 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <div className="flex flex-col xl:flex-row items-start xl:items-center gap-4 xl:gap-6">
-          <div className="h-12 w-12 xl:h-16 xl:w-16 rounded-xl xl:rounded-2xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
-            <Sparkles className="h-6 w-6 xl:h-8 xl:w-8" />
+      <Card className="p-5 xl:p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
+            <Sparkles className="h-6 w-6" />
           </div>
           <div className="flex-1">
-            <h2 className="font-semibold xl:text-lg">Generador de presupuestos con IA</h2>
+            <h2 className="font-semibold xl:text-lg">Presupuesto profesional con IA</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Contanos qué trabajo vas a hacer y cuánto querés cobrar. Lo convertimos en un presupuesto profesional listo para enviar por WhatsApp.
+              Sumá ítems detallados, calculá IVA y bajalo en PDF con tu membrete o mandalo por WhatsApp.
             </p>
           </div>
-          <Button size="lg" className="w-full xl:w-auto xl:hidden" onClick={() => setShowForm(true)}>
+          <Button size="lg" className="w-full xl:w-auto xl:hidden" onClick={() => { resetForm(); setShowForm(true); }}>
             <Sparkles className="h-4 w-4 mr-2" />
-            Crear nuevo presupuesto
+            Crear presupuesto
           </Button>
         </div>
       </Card>
 
+      {/* Toolbar */}
+      <div className="flex flex-col xl:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente o trabajo..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filtroEstado} onValueChange={(v: any) => setFiltroEstado(v)}>
+          <SelectTrigger className="xl:w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los estados</SelectItem>
+            <SelectItem value="borrador">Borradores</SelectItem>
+            <SelectItem value="enviado">Enviados</SelectItem>
+            <SelectItem value="aceptado">Aceptados</SelectItem>
+            <SelectItem value="rechazado">Rechazados</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Lista */}
       <div>
-        <h2 className="text-sm xl:text-base font-semibold mb-3">Mis presupuestos</h2>
+        <h2 className="text-sm xl:text-base font-semibold mb-3">
+          Mis presupuestos ({presupuestosFiltrados.length})
+        </h2>
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-          {presupuestos.map((p) => (
-            <Card key={p.id} className="p-4 hover:shadow-md transition-shadow">
+          {presupuestosFiltrados.map((p) => (
+            <Card key={p.id} className="p-4 hover:shadow-md transition-shadow flex flex-col">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm xl:text-base font-medium truncate">{p.cliente}</p>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{p.descripcionTrabajo}</p>
                 </div>
-              </div>
-              <div className="flex items-end justify-between mt-3">
-                <div>
-                  <p className="text-lg xl:text-xl font-bold">${p.montoTotal.toLocaleString('es-AR')}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {new Date(p.fechaEmision).toLocaleDateString('es-AR')}
-                  </p>
-                </div>
-                <Badge className={`text-[10px] ${ESTADO_COLOR[p.estado]}`} variant="outline">
+                <Badge className={`text-[10px] capitalize ${ESTADO_COLOR[p.estado]}`} variant="outline">
                   {p.estado}
                 </Badge>
               </div>
+              <div className="flex items-end justify-between mt-auto">
+                <div>
+                  <p className="text-lg xl:text-xl font-bold">{fmt(p.montoTotal)}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {new Date(p.fechaEmision).toLocaleDateString('es-AR')}
+                    {p.items?.length ? ` · ${p.items.length} ítems` : ''}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t">
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => abrirEditar(p)}>
+                  <Pencil className="h-3 w-3 mr-1" /> Editar
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handlePDF(p)}>
+                  <FileDown className="h-3 w-3 mr-1" /> PDF
+                </Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => duplicarPresupuesto(p.id)}>
+                  <CopyIcon className="h-3 w-3 mr-1" /> Duplicar
+                </Button>
+                {p.estado !== 'aceptado' && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => cambiarEstado(p.id, 'enviado')}>
+                    Marcar enviado
+                  </Button>
+                )}
+                {p.estado === 'enviado' && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-emerald-600" onClick={() => cambiarEstado(p.id, 'aceptado')}>
+                    Aceptar
+                  </Button>
+                )}
+                {p.estado === 'aceptado' && (
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleConvertir(p.id)}>
+                    <ArrowRightCircle className="h-3 w-3 mr-1" /> A trabajo
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-red-600 ml-auto" onClick={() => eliminar(p.id)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
             </Card>
           ))}
+          {presupuestosFiltrados.length === 0 && (
+            <p className="text-sm text-muted-foreground col-span-full text-center py-8">
+              No hay presupuestos.
+            </p>
+          )}
         </div>
       </div>
 
       {/* Mobile Sheet */}
-      <Sheet
-        open={showForm && !isDesktop()}
-        onOpenChange={(o) => {
-          setShowForm(o);
-          if (!o) resetForm();
-        }}
-      >
+      <Sheet open={showForm && !isDesktop()} onOpenChange={(o) => { if (!o) cerrarForm(); }}>
         <SheetContent side="bottom" className="h-[95vh] overflow-y-auto rounded-t-2xl xl:hidden">
           {!presupuestoGenerado ? (
             <>
               <SheetHeader>
-                <SheetTitle>Nuevo presupuesto</SheetTitle>
-                <SheetDescription>Completá los datos y la IA redacta el texto profesional.</SheetDescription>
+                <SheetTitle>{editId ? 'Editar presupuesto' : 'Nuevo presupuesto'}</SheetTitle>
+                <SheetDescription>Completá los datos. Podés guardarlo o generar el texto con IA.</SheetDescription>
               </SheetHeader>
               {FormBody}
             </>
@@ -316,7 +547,7 @@ export default function GremiosPresupuesto() {
             <>
               <SheetHeader>
                 <SheetTitle>Presupuesto generado</SheetTitle>
-                <SheetDescription>Revisalo, copialo o compartilo por WhatsApp.</SheetDescription>
+                <SheetDescription>Revisalo, copialo, descargalo en PDF o compartilo.</SheetDescription>
               </SheetHeader>
               {ResultBody}
             </>
@@ -325,19 +556,13 @@ export default function GremiosPresupuesto() {
       </Sheet>
 
       {/* Desktop Dialog */}
-      <Dialog
-        open={showForm && isDesktop()}
-        onOpenChange={(o) => {
-          setShowForm(o);
-          if (!o) resetForm();
-        }}
-      >
-        <DialogContent className="hidden xl:flex flex-col max-w-3xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showForm && isDesktop()} onOpenChange={(o) => { if (!o) cerrarForm(); }}>
+        <DialogContent className="hidden xl:flex flex-col max-w-3xl max-h-[92vh] overflow-y-auto">
           {!presupuestoGenerado ? (
             <>
               <DialogHeader>
-                <DialogTitle>Nuevo presupuesto</DialogTitle>
-                <DialogDescription>Completá los datos y la IA redacta el texto profesional.</DialogDescription>
+                <DialogTitle>{editId ? 'Editar presupuesto' : 'Nuevo presupuesto'}</DialogTitle>
+                <DialogDescription>Completá los datos. Podés guardarlo o generar el texto con IA.</DialogDescription>
               </DialogHeader>
               {FormBody}
             </>
@@ -345,7 +570,7 @@ export default function GremiosPresupuesto() {
             <>
               <DialogHeader>
                 <DialogTitle>Presupuesto generado</DialogTitle>
-                <DialogDescription>Revisalo, copialo o compartilo por WhatsApp.</DialogDescription>
+                <DialogDescription>Revisalo, copialo, descargalo en PDF o compartilo.</DialogDescription>
               </DialogHeader>
               {ResultBody}
             </>
