@@ -7,6 +7,15 @@ export type EstadoCobro = 'cobrado' | 'pendiente' | 'vencido' | 'cancelado';
 
 export type EstadoTrabajo = 'en_curso' | 'finalizado' | 'presupuestado' | 'cancelado';
 
+export interface EntradaBitacora {
+  id: string;
+  fecha: string; // ISO date
+  hora?: string;
+  texto: string;
+  fotos?: string[];
+  tipo?: 'avance' | 'problema' | 'material' | 'visita' | 'nota';
+}
+
 export interface TrabajoGremio {
   id: string;
   descripcion: string;
@@ -20,6 +29,7 @@ export interface TrabajoGremio {
   notas?: string;
   fotos?: string[];
   presupuestoId?: string;
+  bitacora?: EntradaBitacora[];
 }
 
 export interface PresupuestoGremio {
