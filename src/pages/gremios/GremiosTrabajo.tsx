@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { mockTrabajos } from '@/data/mockGremios';
-import type { TrabajoGremio, EstadoCobro } from '@/types/gremios';
+import type { TrabajoGremio, EstadoCobro, EntradaBitacora } from '@/types/gremios';
+import BitacoraTrabajo from '@/components/gremios/BitacoraTrabajo';
 
 const fmt = (n: number) => `$${n.toLocaleString('es-AR')}`;
 
