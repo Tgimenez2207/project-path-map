@@ -172,11 +172,30 @@ export default function GremiosAgenda() {
             Visualizá y organizá tus turnos
           </p>
         </div>
-        <Button className="hidden xl:inline-flex" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar turno
-        </Button>
-      </div>
+        <div className="hidden xl:flex items-center gap-2">
+          <div className="flex rounded-lg border p-0.5 bg-muted/40">
+            <button
+              onClick={() => setVistaDesktop('calendario')}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+                vistaDesktop === 'calendario' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Calendario
+            </button>
+            <button
+              onClick={() => setVistaDesktop('lista')}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+                vistaDesktop === 'lista' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              <List className="h-3.5 w-3.5" /> Lista
+            </button>
+          </div>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar turno
+          </Button>
+        </div>
 
       {/* KPIs desktop */}
       <div className="hidden xl:grid grid-cols-3 gap-4">
