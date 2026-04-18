@@ -280,8 +280,17 @@ export default function GremiosTrabajo() {
               const b = badgeFor(t);
               const color = t.estadoCobro === 'cobrado' ? 'text-emerald-600' : t.estadoCobro === 'vencido' ? 'text-red-600' : 'text-amber-600';
               return (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium max-w-xs truncate">{t.descripcion}</TableCell>
+                <TableRow key={t.id} className="cursor-pointer" onClick={() => setDetalleId(t.id)}>
+                  <TableCell className="font-medium max-w-xs truncate">
+                    <div className="flex items-center gap-2">
+                      {t.descripcion}
+                      {(t.bitacora?.length ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <BookOpen className="h-3 w-3" /> {t.bitacora!.length}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{t.cliente}</TableCell>
                   <TableCell className="text-muted-foreground max-w-xs truncate">{t.direccion}</TableCell>
                   <TableCell className="text-muted-foreground">{new Date(t.fecha).toLocaleDateString('es-AR')}</TableCell>
@@ -289,7 +298,7 @@ export default function GremiosTrabajo() {
                   <TableCell>
                     <Badge variant="outline" className={`text-xs ${b.cls}`}>{b.label}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     {(t.estadoCobro === 'pendiente' || t.estadoCobro === 'vencido') && (
                       <Button size="sm" variant="outline" onClick={() => marcarCobrado(t.id)}>
                         Cobrar ✓
