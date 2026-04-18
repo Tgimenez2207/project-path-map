@@ -196,6 +196,14 @@ export default function GremiosAgenda() {
             Agregar turno
           </Button>
         </div>
+      </div>
+
+      {/* Vista calendario solo desktop */}
+      {vistaDesktop === 'calendario' && (
+        <div className="hidden xl:block">
+          <GremiosCalendario turnos={turnos} onMoverTurno={moverTurno} onSelectDay={seleccionarDia} />
+        </div>
+      )}
 
       {/* KPIs desktop */}
       <div className="hidden xl:grid grid-cols-3 gap-4">
