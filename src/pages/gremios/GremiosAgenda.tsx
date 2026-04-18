@@ -226,7 +226,7 @@ export default function GremiosAgenda() {
       )}
 
       {/* Vista por día — mobile + desktop con grid */}
-      <div className="space-y-5 xl:space-y-8">
+      <div className={`space-y-5 xl:space-y-8 ${vistaDesktop === 'calendario' ? 'xl:hidden' : ''}`}>
         {dias.map((dia) => (
           <div key={dia}>
             <div className="flex items-center gap-2 mb-3">
