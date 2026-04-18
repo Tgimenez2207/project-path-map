@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Clock, MapPin, User } from 'lucide-react';
+import { Plus, Clock, MapPin, User, List, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockTurnos } from '@/data/mockGremios';
+import { useGremios } from '@/contexts/GremiosContext';
+import GremiosCalendario from '@/components/gremios/GremiosCalendario';
 import type { TurnoAgenda } from '@/types/gremios';
 
 const TIPO_COLOR: Record<TurnoAgenda['tipo'], string> = {
@@ -34,8 +35,9 @@ function formatDia(iso: string): string {
 const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 1280;
 
 export default function GremiosAgenda() {
-  const [turnos, setTurnos] = useState<TurnoAgenda[]>(mockTurnos);
+  const { turnos, setTurnos } = useGremios();
   const [showForm, setShowForm] = useState(false);
+  const [vistaDesktop, setVistaDesktop] = useState<'calendario' | 'lista'>('calendario');
   const [form, setForm] = useState({
     titulo: '',
     cliente: '',
@@ -46,6 +48,15 @@ export default function GremiosAgenda() {
     duracionMinutos: 60,
     notas: '',
   });
+
+  const moverTurno = (id: string, nuevaFecha: string) => {
+    setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, fecha: nuevaFecha } : t)));
+  };
+
+  const seleccionarDia = (fecha: string) => {
+    setForm((p) => ({ ...p, fecha }));
+    setShowForm(true);
+  };
 
   const turnosPorDia = useMemo(() => {
     const acc: Record<string, TurnoAgenda[]> = {};
@@ -161,11 +172,38 @@ export default function GremiosAgenda() {
             Visualizá y organizá tus turnos
           </p>
         </div>
-        <Button className="hidden xl:inline-flex" onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar turno
-        </Button>
+        <div className="hidden xl:flex items-center gap-2">
+          <div className="flex rounded-lg border p-0.5 bg-muted/40">
+            <button
+              onClick={() => setVistaDesktop('calendario')}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+                vistaDesktop === 'calendario' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> Calendario
+            </button>
+            <button
+              onClick={() => setVistaDesktop('lista')}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors flex items-center gap-1.5 ${
+                vistaDesktop === 'lista' ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              <List className="h-3.5 w-3.5" /> Lista
+            </button>
+          </div>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar turno
+          </Button>
+        </div>
       </div>
+
+      {/* Vista calendario solo desktop */}
+      {vistaDesktop === 'calendario' && (
+        <div className="hidden xl:block">
+          <GremiosCalendario turnos={turnos} onMoverTurno={moverTurno} onSelectDay={seleccionarDia} />
+        </div>
+      )}
 
       {/* KPIs desktop */}
       <div className="hidden xl:grid grid-cols-3 gap-4">
@@ -188,7 +226,7 @@ export default function GremiosAgenda() {
       )}
 
       {/* Vista por día — mobile + desktop con grid */}
-      <div className="space-y-5 xl:space-y-8">
+      <div className={`space-y-5 xl:space-y-8 ${vistaDesktop === 'calendario' ? 'xl:hidden' : ''}`}>
         {dias.map((dia) => (
           <div key={dia}>
             <div className="flex items-center gap-2 mb-3">
