@@ -75,7 +75,7 @@ export default function GremiosInicio() {
               <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-blue-900">{presupEnviados} presupuesto{presupEnviados > 1 ? 's' : ''} esperando respuesta</p>
-                <p className="text-xs text-blue-700 truncate">Hacé un follow-up</p>
+                <p className="text-xs text-blue-700 truncate">Hacé un seguimiento</p>
               </div>
             </button>
           )}
