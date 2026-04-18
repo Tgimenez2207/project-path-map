@@ -343,6 +343,73 @@ export default function GremiosTrabajo() {
           {FormFields}
         </DialogContent>
       </Dialog>
+
+      {/* Detalle del trabajo (mobile) */}
+      <Sheet open={!!detalle} onOpenChange={(o) => !o && setDetalleId(null)}>
+        <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-2xl xl:hidden">
+          {detalle && (
+            <>
+              <SheetHeader className="text-left">
+                <SheetTitle className="text-base">{detalle.descripcion}</SheetTitle>
+                <SheetDescription>
+                  {detalle.cliente} · {detalle.direccion}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-4 space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Monto</p>
+                    <p className="text-lg font-bold">{fmt(detalle.monto)}</p>
+                  </div>
+                  <Badge variant="outline" className={`text-xs ${badgeFor(detalle).cls}`}>
+                    {badgeFor(detalle).label}
+                  </Badge>
+                </div>
+                <BitacoraTrabajo
+                  entradas={detalle.bitacora ?? []}
+                  onAgregar={(e) => agregarEntrada(detalle.id, e)}
+                />
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Detalle del trabajo (desktop) */}
+      <Dialog open={!!detalle && typeof window !== 'undefined' && window.innerWidth >= 1280} onOpenChange={(o) => !o && setDetalleId(null)}>
+        <DialogContent className="hidden xl:block max-w-3xl max-h-[90vh] overflow-y-auto">
+          {detalle && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{detalle.descripcion}</DialogTitle>
+                <DialogDescription>
+                  {detalle.cliente} · {detalle.direccion} · {new Date(detalle.fecha).toLocaleDateString('es-AR')}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 grid grid-cols-3 gap-4 mb-4">
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Monto</p>
+                  <p className="text-lg font-bold">{fmt(detalle.monto)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Estado de cobro</p>
+                  <Badge variant="outline" className={`text-xs mt-1 ${badgeFor(detalle).cls}`}>
+                    {badgeFor(detalle).label}
+                  </Badge>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Estado del trabajo</p>
+                  <p className="text-sm font-medium mt-1 capitalize">{detalle.estadoTrabajo.replace('_', ' ')}</p>
+                </div>
+              </div>
+              <BitacoraTrabajo
+                entradas={detalle.bitacora ?? []}
+                onAgregar={(e) => agregarEntrada(detalle.id, e)}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
