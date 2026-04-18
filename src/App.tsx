@@ -52,6 +52,7 @@ import GremiosTrabajo from "@/pages/gremios/GremiosTrabajo";
 import GremiosPresupuesto from "@/pages/gremios/GremiosPresupuesto";
 import GremiosAgenda from "@/pages/gremios/GremiosAgenda";
 import GremiosAsistente from "@/pages/gremios/GremiosAsistente";
+import GremiosClientes from "@/pages/gremios/GremiosClientes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -117,6 +118,7 @@ const App = () => (
                 <Route path="trabajos" element={<GremiosTrabajo />} />
                 <Route path="presupuestos" element={<GremiosPresupuesto />} />
                 <Route path="agenda" element={<GremiosAgenda />} />
+                <Route path="clientes" element={<GremiosClientes />} />
                 <Route path="asistente" element={<GremiosAsistente />} />
               </Route>
               <Route element={<PortalLayout />}>

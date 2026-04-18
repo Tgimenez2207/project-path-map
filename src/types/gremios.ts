@@ -9,10 +9,10 @@ export type EstadoTrabajo = 'en_curso' | 'finalizado' | 'presupuestado' | 'cance
 
 export interface EntradaBitacora {
   id: string;
-  fecha: string; // ISO date
+  fecha: string;
   hora?: string;
   texto: string;
-  fotos?: string[];
+  fotos?: string[]; // data URLs
   tipo?: 'avance' | 'problema' | 'material' | 'visita' | 'nota';
 }
 
@@ -32,6 +32,14 @@ export interface TrabajoGremio {
   bitacora?: EntradaBitacora[];
 }
 
+export interface ItemPresupuesto {
+  id: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precioUnitario: number;
+}
+
 export interface PresupuestoGremio {
   id: string;
   cliente: string;
@@ -45,6 +53,8 @@ export interface PresupuestoGremio {
   fechaEmision: string;
   estado: 'borrador' | 'enviado' | 'aceptado' | 'rechazado';
   textoGenerado?: string;
+  items?: ItemPresupuesto[];
+  iva?: boolean; // si suma 21% IVA
 }
 
 export interface TurnoAgenda {
