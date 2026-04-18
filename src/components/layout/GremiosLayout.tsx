@@ -39,7 +39,6 @@ function GremiosLayoutInner() {
   const perfilActivo = location.pathname.startsWith('/portal/gremios/perfil');
 
   return (
-    <GremiosProvider>
     <div className="min-h-screen bg-muted/30 xl:flex">
       {/* Sidebar desktop (xl+) */}
       <aside className="hidden xl:flex flex-col w-64 shrink-0 bg-background border-r min-h-screen sticky top-0 h-screen">
