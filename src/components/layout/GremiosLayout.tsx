@@ -149,5 +149,6 @@ export default function GremiosLayout() {
         </main>
       </div>
     </div>
+    </GremiosProvider>
   );
 }
