@@ -77,30 +77,49 @@ function GremiosLayoutInner() {
         </nav>
 
         <div className="p-3 border-t">
-          <div className="flex items-center gap-3 px-2 py-2">
-            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm">
-              {mockPerfilGremio.nombre.charAt(0)}
+          <button
+            onClick={() => navigate('/portal/gremios/perfil')}
+            className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors text-left ${
+              perfilActivo ? 'bg-muted' : 'hover:bg-muted'
+            }`}
+            aria-label="Editar perfil"
+          >
+            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-sm shrink-0">
+              {perfil.nombre.charAt(0) || <User className="h-4 w-4" />}
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{mockPerfilGremio.nombre}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{perfil.nombre}</p>
               <p className="text-[11px] text-muted-foreground truncate">
-                {getRubroLabel(mockPerfilGremio.rubro)}
+                {getRubroLabel(perfil.rubro)}
               </p>
             </div>
-          </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
         </div>
       </aside>
 
       {/* Mobile container */}
       <div className="xl:hidden min-h-screen flex flex-col bg-background max-w-md mx-auto border-x">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b px-4 py-3 flex items-center gap-3">
-          <div className="flex-1 min-w-0">
+          <button
+            onClick={() => navigate('/portal/gremios/perfil')}
+            className="flex-1 min-w-0 text-left"
+            aria-label="Editar perfil"
+          >
             <p className="text-xs text-muted-foreground">{saludar()} 👋</p>
-            <h1 className="text-base font-semibold truncate">{mockPerfilGremio.nombre}</h1>
+            <h1 className="text-base font-semibold truncate">{perfil.nombre}</h1>
             <p className="text-xs text-muted-foreground truncate">
-              {getRubroLabel(mockPerfilGremio.rubro)} · {mockPerfilGremio.ciudad}
+              {getRubroLabel(perfil.rubro)} · {perfil.ciudad}
             </p>
-          </div>
+          </button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => navigate('/portal/gremios/perfil')}
+            aria-label="Mi perfil"
+          >
+            <User className="h-5 w-5" />
+          </Button>
           <Button
             size="icon"
             variant="ghost"
@@ -145,7 +164,7 @@ function GremiosLayoutInner() {
         <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-8 py-4 flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{saludar()} 👋</p>
-            <h1 className="text-2xl font-bold">{mockPerfilGremio.nombre.split(' ')[0]}</h1>
+            <h1 className="text-2xl font-bold">{perfil.nombre.split(' ')[0]}</h1>
           </div>
           <Button onClick={() => navigate('/portal/gremios/asistente')} variant="outline" className="gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
