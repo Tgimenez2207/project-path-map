@@ -119,8 +119,7 @@ export default function GremiosAgenda() {
       toast.error('Completá título y fecha');
       return;
     }
-    const nuevo: TurnoAgenda = {
-      id: crypto.randomUUID(),
+    const datos = {
       titulo: form.titulo,
       cliente: form.cliente,
       direccion: form.direccion,
@@ -130,10 +129,14 @@ export default function GremiosAgenda() {
       tipo: form.tipo,
       notas: form.notas || undefined,
     };
-    setTurnos((p) => [...p, nuevo]);
-    toast.success('Turno agregado');
-    setShowForm(false);
-    setForm({ titulo: '', cliente: '', direccion: '', fecha: today, hora: '09:00', tipo: 'trabajo', duracionMinutos: 60, notas: '' });
+    if (editId) {
+      actualizarTurno(editId, datos);
+      toast.success('Turno actualizado');
+    } else {
+      setTurnos((p) => [...p, { id: crypto.randomUUID(), ...datos }]);
+      toast.success('Turno agregado');
+    }
+    cerrarForm();
   };
 
   const FormBody = (
@@ -191,7 +194,7 @@ export default function GremiosAgenda() {
         <Textarea value={form.notas} onChange={(e) => setForm((p) => ({ ...p, notas: e.target.value }))} rows={2} />
       </div>
       <Button className="w-full" size="lg" onClick={handleGuardar}>
-        Agregar turno
+        {editId ? 'Guardar cambios' : 'Agregar turno'}
       </Button>
     </div>
   );
