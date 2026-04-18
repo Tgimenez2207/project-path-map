@@ -1,1 +1,4 @@
 project_id = "jpelgnnaojzmokctinzi"
+
+[functions.gremios-ai]
+verify_jwt = false

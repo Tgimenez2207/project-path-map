@@ -45,6 +45,13 @@ import PortalPagos from "@/pages/portal/PortalPagos";
 import PortalDocumentos from "@/pages/portal/PortalDocumentos";
 import PortalAvance from "@/pages/portal/PortalAvance";
 import PortalTerminaciones from "@/pages/portal/PortalTerminaciones";
+import GremiosLayout from "@/components/layout/GremiosLayout";
+import GremiosLogin from "@/pages/gremios/GremiosLogin";
+import GremiosInicio from "@/pages/gremios/GremiosInicio";
+import GremiosTrabajo from "@/pages/gremios/GremiosTrabajo";
+import GremiosPresupuesto from "@/pages/gremios/GremiosPresupuesto";
+import GremiosAgenda from "@/pages/gremios/GremiosAgenda";
+import GremiosAsistente from "@/pages/gremios/GremiosAsistente";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -104,6 +111,14 @@ const App = () => (
             {/* Portal del Cliente Routes */}
             <Route path="/portal" element={<PortalWrapper />}>
               <Route path="login" element={<PortalLogin />} />
+              <Route path="gremios/login" element={<GremiosLogin />} />
+              <Route path="gremios" element={<GremiosLayout />}>
+                <Route index element={<GremiosInicio />} />
+                <Route path="trabajos" element={<GremiosTrabajo />} />
+                <Route path="presupuestos" element={<GremiosPresupuesto />} />
+                <Route path="agenda" element={<GremiosAgenda />} />
+                <Route path="asistente" element={<GremiosAsistente />} />
+              </Route>
               <Route element={<PortalLayout />}>
                 <Route index element={<PortalDashboard />} />
                 <Route path="unidades" element={<PortalUnidades />} />
