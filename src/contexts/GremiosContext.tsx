@@ -9,6 +9,8 @@ interface GremiosContextValue {
   setPresupuestos: React.Dispatch<React.SetStateAction<PresupuestoGremio[]>>;
   turnos: TurnoAgenda[];
   setTurnos: React.Dispatch<React.SetStateAction<TurnoAgenda[]>>;
+  actualizarTurno: (id: string, patch: Partial<TurnoAgenda>) => void;
+  eliminarTurno: (id: string) => void;
   // helpers
   agregarEntradaBitacora: (trabajoId: string, entrada: EntradaBitacora) => void;
   actualizarTrabajo: (id: string, patch: Partial<TrabajoGremio>) => void;
@@ -35,6 +37,14 @@ export function GremiosProvider({ children }: { children: ReactNode }) {
   const [trabajos, setTrabajos] = useState<TrabajoGremio[]>(mockTrabajos);
   const [presupuestos, setPresupuestos] = useState<PresupuestoGremio[]>(mockPresupuestos);
   const [turnos, setTurnos] = useState<TurnoAgenda[]>(mockTurnos);
+
+  const actualizarTurno = (id: string, patch: Partial<TurnoAgenda>) => {
+    setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  };
+
+  const eliminarTurno = (id: string) => {
+    setTurnos((prev) => prev.filter((t) => t.id !== id));
+  };
 
   const agregarEntradaBitacora = (trabajoId: string, entrada: EntradaBitacora) => {
     setTrabajos((prev) =>
@@ -127,6 +137,8 @@ export function GremiosProvider({ children }: { children: ReactNode }) {
     setPresupuestos,
     turnos,
     setTurnos,
+    actualizarTurno,
+    eliminarTurno,
     agregarEntradaBitacora,
     actualizarTrabajo,
     eliminarTrabajo,
