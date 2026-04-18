@@ -42,6 +42,11 @@ export const mockTrabajos: TrabajoGremio[] = [
     estadoCobro: 'pendiente',
     estadoTrabajo: 'en_curso',
     fechaVencimientoCobro: '2026-04-22',
+    bitacora: [
+      { id: 'b1', fecha: '2026-04-16', hora: '09:30', tipo: 'visita', texto: 'Visita inicial. Relevamiento de cañerías existentes. Cliente solicita cambio de regulador.' },
+      { id: 'b2', fecha: '2026-04-17', hora: '14:00', tipo: 'material', texto: 'Compra de regulador y 12 m de caño epoxi. Factura adjunta.' },
+      { id: 'b3', fecha: '2026-04-18', hora: '08:00', tipo: 'avance', texto: 'Inicio de obra. 60% del cañería embutida nueva instalada.' },
+    ],
   },
   {
     id: 't4',
@@ -52,6 +57,10 @@ export const mockTrabajos: TrabajoGremio[] = [
     monto: 120000,
     estadoCobro: 'pendiente',
     estadoTrabajo: 'en_curso',
+    bitacora: [
+      { id: 'b4', fecha: '2026-04-15', hora: '10:00', tipo: 'avance', texto: 'Tendido de cañerías corrugadas en losa. Pendiente paso de cables.' },
+      { id: 'b5', fecha: '2026-04-17', hora: '16:30', tipo: 'problema', texto: 'Tablero existente no admite circuitos nuevos. Hablar con cliente para cambio.' },
+    ],
   },
   {
     id: 't5',
