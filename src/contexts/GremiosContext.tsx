@@ -1,8 +1,12 @@
-import { createContext, useContext, useState, ReactNode, useMemo } from 'react';
-import { mockTrabajos, mockPresupuestos, mockTurnos } from '@/data/mockGremios';
-import type { TrabajoGremio, PresupuestoGremio, TurnoAgenda, EntradaBitacora } from '@/types/gremios';
+import { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import { mockTrabajos, mockPresupuestos, mockTurnos, mockPerfilGremio } from '@/data/mockGremios';
+import type { TrabajoGremio, PresupuestoGremio, TurnoAgenda, EntradaBitacora, PerfilGremio } from '@/types/gremios';
+
+const PERFIL_STORAGE_KEY = 'gremios_perfil';
 
 interface GremiosContextValue {
+  perfil: PerfilGremio;
+  actualizarPerfil: (patch: Partial<PerfilGremio>) => void;
   trabajos: TrabajoGremio[];
   setTrabajos: React.Dispatch<React.SetStateAction<TrabajoGremio[]>>;
   presupuestos: PresupuestoGremio[];
@@ -37,6 +41,23 @@ export function GremiosProvider({ children }: { children: ReactNode }) {
   const [trabajos, setTrabajos] = useState<TrabajoGremio[]>(mockTrabajos);
   const [presupuestos, setPresupuestos] = useState<PresupuestoGremio[]>(mockPresupuestos);
   const [turnos, setTurnos] = useState<TurnoAgenda[]>(mockTurnos);
+  const [perfil, setPerfil] = useState<PerfilGremio>(() => {
+    if (typeof window === 'undefined') return mockPerfilGremio;
+    try {
+      const raw = localStorage.getItem(PERFIL_STORAGE_KEY);
+      return raw ? { ...mockPerfilGremio, ...JSON.parse(raw) } : mockPerfilGremio;
+    } catch {
+      return mockPerfilGremio;
+    }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(PERFIL_STORAGE_KEY, JSON.stringify(perfil)); } catch { /* noop */ }
+  }, [perfil]);
+
+  const actualizarPerfil = (patch: Partial<PerfilGremio>) => {
+    setPerfil((prev) => ({ ...prev, ...patch }));
+  };
 
   const actualizarTurno = (id: string, patch: Partial<TurnoAgenda>) => {
     setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -131,6 +152,8 @@ export function GremiosProvider({ children }: { children: ReactNode }) {
   }, [trabajos, presupuestos]);
 
   const value: GremiosContextValue = {
+    perfil,
+    actualizarPerfil,
     trabajos,
     setTrabajos,
     presupuestos,
