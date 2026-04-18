@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Sparkles, Copy, Check, Plus, FileDown, Copy as CopyIcon, Pencil, Trash2, ArrowRightCircle, Search } from 'lucide-react';
+import { Sparkles, Copy, Check, Plus, FileDown, Copy as CopyIcon, Pencil, Trash2, ArrowRightCircle, Search, MoreHorizontal, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -493,34 +496,52 @@ export default function GremiosPresupuesto() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t">
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => abrirEditar(p)}>
-                  <Pencil className="h-3 w-3 mr-1" /> Editar
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handlePDF(p)}>
-                  <FileDown className="h-3 w-3 mr-1" /> PDF
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => duplicarPresupuesto(p.id)}>
-                  <CopyIcon className="h-3 w-3 mr-1" /> Duplicar
-                </Button>
-                {p.estado !== 'aceptado' && (
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => cambiarEstado(p.id, 'enviado')}>
-                    Marcar enviado
+              <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                <div className="flex gap-1">
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => abrirEditar(p)}>
+                    <Pencil className="h-3 w-3 mr-1" /> Editar
                   </Button>
-                )}
-                {p.estado === 'enviado' && (
-                  <Button size="sm" variant="ghost" className="h-7 text-xs text-emerald-600" onClick={() => cambiarEstado(p.id, 'aceptado')}>
-                    Aceptar
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handlePDF(p)}>
+                    <FileDown className="h-3 w-3 mr-1" /> PDF
                   </Button>
-                )}
-                {p.estado === 'aceptado' && (
-                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleConvertir(p.id)}>
-                    <ArrowRightCircle className="h-3 w-3 mr-1" /> A trabajo
-                  </Button>
-                )}
-                <Button size="sm" variant="ghost" className="h-7 text-xs text-red-600 ml-auto" onClick={() => eliminar(p.id)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="ghost" className="h-7 w-7">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel className="text-xs">Acciones</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => duplicarPresupuesto(p.id)}>
+                      <CopyIcon className="h-4 w-4 mr-2" /> Duplicar
+                    </DropdownMenuItem>
+                    {p.estado !== 'aceptado' && p.estado !== 'enviado' && (
+                      <DropdownMenuItem onClick={() => cambiarEstado(p.id, 'enviado')}>
+                        <Send className="h-4 w-4 mr-2" /> Marcar enviado
+                      </DropdownMenuItem>
+                    )}
+                    {p.estado === 'enviado' && (
+                      <>
+                        <DropdownMenuItem className="text-emerald-600 focus:text-emerald-600" onClick={() => cambiarEstado(p.id, 'aceptado')}>
+                          <ThumbsUp className="h-4 w-4 mr-2" /> Marcar aceptado
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => cambiarEstado(p.id, 'rechazado')}>
+                          <ThumbsDown className="h-4 w-4 mr-2" /> Marcar rechazado
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {p.estado === 'aceptado' && (
+                      <DropdownMenuItem onClick={() => handleConvertir(p.id)}>
+                        <ArrowRightCircle className="h-4 w-4 mr-2" /> Convertir en trabajo
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => eliminar(p.id)}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </Card>
           ))}

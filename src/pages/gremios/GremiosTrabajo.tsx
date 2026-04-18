@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, BookOpen, MessageCircle, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, BookOpen, MessageCircle, Pencil, Trash2, MoreHorizontal, Eye, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useGremios } from '@/contexts/GremiosContext';
 import BitacoraTrabajo from '@/components/gremios/BitacoraTrabajo';
@@ -456,10 +459,34 @@ export default function GremiosTrabajo() {
                   <TableCell className={`text-right font-bold ${color}`}>{fmt(t.monto)}</TableCell>
                   <TableCell><Badge variant="outline" className={`text-xs ${bt.cls}`}>{bt.label}</Badge></TableCell>
                   <TableCell><Badge variant="outline" className={`text-xs ${b.cls}`}>{b.label}</Badge></TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setDetalleId(t.id); }}>
-                      Ver
-                    </Button>
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={() => setDetalleId(t.id)}>
+                          <Eye className="h-4 w-4 mr-2" /> Ver detalle
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => abrirEditar(t)}>
+                          <Pencil className="h-4 w-4 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        {t.estadoCobro !== 'cobrado' && (
+                          <DropdownMenuItem onClick={() => cambiarEstadoCobro(t.id, 'cobrado')}>
+                            <CheckCircle2 className="h-4 w-4 mr-2" /> Marcar cobrado
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => whatsappCobro(t)}>
+                          <MessageCircle className="h-4 w-4 mr-2" /> Recordar cobro
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => eliminar(t.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               );
