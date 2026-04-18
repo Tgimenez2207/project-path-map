@@ -178,5 +178,4 @@ function GremiosLayoutInner() {
       </div>
     </div>
   );
-  );
 }
