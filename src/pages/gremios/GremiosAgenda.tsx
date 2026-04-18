@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Clock, MapPin, User } from 'lucide-react';
+import { Plus, Clock, MapPin, User, List, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { mockTurnos } from '@/data/mockGremios';
+import { useGremios } from '@/contexts/GremiosContext';
+import GremiosCalendario from '@/components/gremios/GremiosCalendario';
 import type { TurnoAgenda } from '@/types/gremios';
 
 const TIPO_COLOR: Record<TurnoAgenda['tipo'], string> = {
@@ -34,8 +35,9 @@ function formatDia(iso: string): string {
 const isDesktop = () => typeof window !== 'undefined' && window.innerWidth >= 1280;
 
 export default function GremiosAgenda() {
-  const [turnos, setTurnos] = useState<TurnoAgenda[]>(mockTurnos);
+  const { turnos, setTurnos } = useGremios();
   const [showForm, setShowForm] = useState(false);
+  const [vistaDesktop, setVistaDesktop] = useState<'calendario' | 'lista'>('calendario');
   const [form, setForm] = useState({
     titulo: '',
     cliente: '',
@@ -46,6 +48,15 @@ export default function GremiosAgenda() {
     duracionMinutos: 60,
     notas: '',
   });
+
+  const moverTurno = (id: string, nuevaFecha: string) => {
+    setTurnos((prev) => prev.map((t) => (t.id === id ? { ...t, fecha: nuevaFecha } : t)));
+  };
+
+  const seleccionarDia = (fecha: string) => {
+    setForm((p) => ({ ...p, fecha }));
+    setShowForm(true);
+  };
 
   const turnosPorDia = useMemo(() => {
     const acc: Record<string, TurnoAgenda[]> = {};
