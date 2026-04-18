@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Wrench, Calendar, MessageSquare, ChevronRight } from 'lucide-react';
+import { Sparkles, Wrench, Calendar, MessageSquare, ChevronRight, TrendingUp, AlertCircle, DollarSign, Clock } from 'lucide-react';
 import { mockTrabajos, mockTurnos } from '@/data/mockGremios';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,120 +26,171 @@ export default function GremiosInicio() {
   const trabajosActivos = trabajos.filter((t) => t.estadoTrabajo === 'en_curso').length;
   const pagosVencidos = trabajos.filter((t) => t.estadoCobro === 'vencido').length;
   const turnosHoy = mockTurnos.filter((t) => t.fecha === today).length;
+  const turnosProximos = [...mockTurnos]
+    .filter((t) => t.fecha >= today)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora))
+    .slice(0, 4);
 
-  const recientes = [...trabajos].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 4);
+  const recientes = [...trabajos].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 5);
+
+  const KPIS = [
+    { label: 'Cobrado este mes', value: fmt(cobradoMes), icon: TrendingUp, accent: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { label: 'Por cobrar', value: fmt(porCobrar), icon: DollarSign, accent: 'text-amber-600', bg: 'bg-amber-500/10' },
+    { label: 'Trabajos activos', value: trabajosActivos, icon: Wrench, accent: 'text-foreground', bg: 'bg-muted' },
+    { label: 'Pagos vencidos', value: pagosVencidos, icon: AlertCircle, accent: pagosVencidos > 0 ? 'text-red-600' : 'text-foreground', bg: pagosVencidos > 0 ? 'bg-red-500/10' : 'bg-muted' },
+  ];
 
   const acciones = [
-    {
-      label: 'Nuevo presupuesto',
-      sub: 'La IA te ayuda',
-      icon: Sparkles,
-      path: '/portal/gremios/presupuestos',
-      primary: true,
-    },
+    { label: 'Nuevo presupuesto', sub: 'La IA te ayuda', icon: Sparkles, path: '/portal/gremios/presupuestos', primary: true },
     { label: 'Registrar trabajo', sub: 'Rápido, en 30 seg', icon: Wrench, path: '/portal/gremios/trabajos' },
     { label: 'Mi agenda', sub: `${turnosHoy} turnos hoy`, icon: Calendar, path: '/portal/gremios/agenda' },
     { label: 'Consultá la IA', sub: 'Precios, consejos', icon: MessageSquare, path: '/portal/gremios/asistente' },
   ];
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 xl:p-0 space-y-6 xl:space-y-8">
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Cobrado este mes</p>
-          <p className="text-lg font-bold text-emerald-600">{fmt(cobradoMes)}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Por cobrar</p>
-          <p className="text-lg font-bold text-amber-600">{fmt(porCobrar)}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Trabajos activos</p>
-          <p className="text-lg font-bold">{trabajosActivos}</p>
-        </Card>
-        <Card className="p-3">
-          <p className="text-xs text-muted-foreground">Pagos vencidos</p>
-          <p className={`text-lg font-bold ${pagosVencidos > 0 ? 'text-red-600' : ''}`}>{pagosVencidos}</p>
-        </Card>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-4">
+        {KPIS.map((k) => {
+          const Icon = k.icon;
+          return (
+            <Card key={k.label} className="p-3 xl:p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs xl:text-sm text-muted-foreground">{k.label}</p>
+                  <p className={`text-lg xl:text-2xl font-bold mt-1 ${k.accent}`}>{k.value}</p>
+                </div>
+                <div className={`hidden xl:flex h-10 w-10 rounded-xl ${k.bg} ${k.accent} items-center justify-center`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Acciones rápidas */}
       <div>
-        <h2 className="text-sm font-semibold mb-3">Acciones rápidas</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <h2 className="text-sm xl:text-base font-semibold mb-3">Acciones rápidas</h2>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 xl:gap-4">
           {acciones.map((a) => {
             const Icon = a.icon;
             return (
               <button
                 key={a.path}
                 onClick={() => navigate(a.path)}
-                className={`p-4 rounded-xl text-left transition-colors ${
+                className={`p-4 xl:p-5 rounded-xl text-left transition-all xl:hover:scale-[1.02] ${
                   a.primary
                     ? 'bg-foreground text-background hover:bg-foreground/90'
                     : 'border bg-card hover:bg-muted/50'
                 }`}
               >
-                <Icon className="h-5 w-5 mb-2" />
-                <p className="font-medium text-sm">{a.label}</p>
-                <p className={`text-xs ${a.primary ? 'opacity-70' : 'text-muted-foreground'}`}>{a.sub}</p>
+                <Icon className="h-5 w-5 xl:h-6 xl:w-6 mb-2" />
+                <p className="font-medium text-sm xl:text-base">{a.label}</p>
+                <p className={`text-xs xl:text-sm mt-0.5 ${a.primary ? 'opacity-70' : 'text-muted-foreground'}`}>
+                  {a.sub}
+                </p>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Trabajos recientes */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">Trabajos recientes</h2>
-          <button
-            onClick={() => navigate('/portal/gremios/trabajos')}
-            className="text-xs text-primary flex items-center gap-1"
-          >
-            Ver todos <ChevronRight className="h-3 w-3" />
-          </button>
-        </div>
-        <div className="space-y-2">
-          {recientes.map((t) => {
-            const color =
-              t.estadoCobro === 'cobrado'
-                ? 'text-emerald-600'
-                : t.estadoCobro === 'vencido'
-                  ? 'text-red-600'
-                  : 'text-amber-600';
-            const badgeLabel =
-              t.estadoCobro === 'cobrado'
-                ? 'Cobrado ✓'
-                : t.estadoCobro === 'vencido'
-                  ? `Vencido hace ${diasDesde(t.fechaVencimientoCobro)}d`
-                  : t.estadoCobro === 'pendiente'
-                    ? 'Pendiente'
-                    : 'Cancelado';
-            return (
-              <Card
-                key={t.id}
-                className="p-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => navigate('/portal/gremios/trabajos')}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{t.descripcion}</p>
-                    <p className="text-xs text-muted-foreground">{t.cliente}</p>
+      {/* Grid de trabajos + agenda en desktop */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Trabajos recientes */}
+        <div className="xl:col-span-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm xl:text-base font-semibold">Trabajos recientes</h2>
+            <button
+              onClick={() => navigate('/portal/gremios/trabajos')}
+              className="text-xs text-primary flex items-center gap-1 hover:underline"
+            >
+              Ver todos <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="space-y-2">
+            {recientes.map((t) => {
+              const color =
+                t.estadoCobro === 'cobrado'
+                  ? 'text-emerald-600'
+                  : t.estadoCobro === 'vencido'
+                    ? 'text-red-600'
+                    : 'text-amber-600';
+              const badgeLabel =
+                t.estadoCobro === 'cobrado'
+                  ? 'Cobrado ✓'
+                  : t.estadoCobro === 'vencido'
+                    ? `Vencido hace ${diasDesde(t.fechaVencimientoCobro)}d`
+                    : t.estadoCobro === 'pendiente'
+                      ? 'Pendiente'
+                      : 'Cancelado';
+              return (
+                <Card
+                  key={t.id}
+                  className="p-3 xl:p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => navigate('/portal/gremios/trabajos')}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm xl:text-base font-medium truncate">{t.descripcion}</p>
+                      <p className="text-xs xl:text-sm text-muted-foreground">{t.cliente}</p>
+                      <p className="hidden xl:block text-xs text-muted-foreground truncate mt-0.5">{t.direccion}</p>
+                    </div>
+                    <p className={`text-sm xl:text-lg font-bold whitespace-nowrap ${color}`}>{fmt(t.monto)}</p>
                   </div>
-                  <p className={`text-sm font-bold whitespace-nowrap ${color}`}>{fmt(t.monto)}</p>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <Badge variant="outline" className="text-[10px]">
-                    {badgeLabel}
-                  </Badge>
-                  <p className="text-[10px] text-muted-foreground">
-                    {new Date(t.fecha).toLocaleDateString('es-AR')}
-                  </p>
-                </div>
-              </Card>
-            );
-          })}
+                  <div className="flex items-center justify-between mt-2">
+                    <Badge variant="outline" className="text-[10px] xl:text-xs">
+                      {badgeLabel}
+                    </Badge>
+                    <p className="text-[10px] xl:text-xs text-muted-foreground">
+                      {new Date(t.fecha).toLocaleDateString('es-AR')}
+                    </p>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Próximos turnos (solo desktop) */}
+        <div className="hidden xl:block">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-semibold">Próximos turnos</h2>
+            <button
+              onClick={() => navigate('/portal/gremios/agenda')}
+              className="text-xs text-primary flex items-center gap-1 hover:underline"
+            >
+              Ver agenda <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+          <Card className="p-2">
+            {turnosProximos.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No hay turnos próximos</p>
+            ) : (
+              <div className="divide-y">
+                {turnosProximos.map((t) => (
+                  <div key={t.id} className="p-3 flex gap-3">
+                    <div className="flex flex-col items-center justify-center w-12 shrink-0">
+                      <p className="text-xs text-muted-foreground uppercase">
+                        {new Date(t.fecha + 'T00:00:00').toLocaleDateString('es-AR', { month: 'short' })}
+                      </p>
+                      <p className="text-lg font-bold leading-none">
+                        {new Date(t.fecha + 'T00:00:00').getDate()}
+                      </p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" /> {t.hora}
+                      </div>
+                      <p className="text-sm font-medium truncate">{t.titulo}</p>
+                      <p className="text-xs text-muted-foreground truncate">{t.cliente}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </div>
     </div>
