@@ -1,8 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Wrench, FileText, Calendar, Sparkles } from 'lucide-react';
+import { Home, Wrench, FileText, Calendar, Sparkles, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { mockPerfilGremio } from '@/data/mockGremios';
 import { getRubroLabel } from '@/types/gremios';
+import { GremiosProvider } from '@/contexts/GremiosContext';
 
 function saludar(): string {
   const h = new Date().getHours();
@@ -15,6 +16,7 @@ const NAV_ITEMS = [
   { path: '/portal/gremios', label: 'Inicio', icon: Home, exact: true },
   { path: '/portal/gremios/trabajos', label: 'Trabajos', icon: Wrench },
   { path: '/portal/gremios/presupuestos', label: 'Presupuestos', icon: FileText },
+  { path: '/portal/gremios/clientes', label: 'Clientes', icon: Users },
   { path: '/portal/gremios/agenda', label: 'Agenda', icon: Calendar },
   { path: '/portal/gremios/asistente', label: 'Asistente IA', icon: Sparkles },
 ];
@@ -27,6 +29,7 @@ export default function GremiosLayout() {
     item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
 
   return (
+    <GremiosProvider>
     <div className="min-h-screen bg-muted/30 xl:flex">
       {/* Sidebar desktop (xl+) */}
       <aside className="hidden xl:flex flex-col w-64 shrink-0 bg-background border-r min-h-screen sticky top-0 h-screen">
