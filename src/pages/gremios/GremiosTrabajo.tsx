@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { mockTrabajos } from '@/data/mockGremios';
-import type { TrabajoGremio, EstadoCobro } from '@/types/gremios';
+import type { TrabajoGremio, EstadoCobro, EntradaBitacora } from '@/types/gremios';
+import BitacoraTrabajo from '@/components/gremios/BitacoraTrabajo';
 
 const fmt = (n: number) => `$${n.toLocaleString('es-AR')}`;
 
@@ -44,6 +45,14 @@ export default function GremiosTrabajo() {
   const [trabajos, setTrabajos] = useState<TrabajoGremio[]>(mockTrabajos);
   const [showForm, setShowForm] = useState(false);
   const [filtro, setFiltro] = useState<'todos' | EstadoCobro>('todos');
+  const [detalleId, setDetalleId] = useState<string | null>(null);
+  const detalle = useMemo(() => trabajos.find((t) => t.id === detalleId) ?? null, [trabajos, detalleId]);
+
+  const agregarEntrada = (trabajoId: string, entrada: EntradaBitacora) => {
+    setTrabajos((prev) =>
+      prev.map((t) => (t.id === trabajoId ? { ...t, bitacora: [...(t.bitacora ?? []), entrada] } : t)),
+    );
+  };
 
   const [form, setForm] = useState({
     descripcion: '',
@@ -218,7 +227,7 @@ export default function GremiosTrabajo() {
           const b = badgeFor(t);
           const color = t.estadoCobro === 'cobrado' ? 'text-emerald-600' : t.estadoCobro === 'vencido' ? 'text-red-600' : 'text-amber-600';
           return (
-            <Card key={t.id} className="p-4 space-y-2">
+            <Card key={t.id} className="p-4 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setDetalleId(t.id)}>
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-medium flex-1">{t.descripcion}</p>
                 <p className={`text-sm font-bold whitespace-nowrap ${color}`}>{fmt(t.monto)}</p>
@@ -226,9 +235,16 @@ export default function GremiosTrabajo() {
               <p className="text-xs text-muted-foreground">{t.cliente}</p>
               <p className="text-xs text-muted-foreground">{t.direccion}</p>
               <div className="flex items-center justify-between pt-1">
-                <Badge variant="outline" className={`text-[10px] ${b.cls}`}>{b.label}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={`text-[10px] ${b.cls}`}>{b.label}</Badge>
+                  {(t.bitacora?.length ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <BookOpen className="h-3 w-3" /> {t.bitacora!.length}
+                    </span>
+                  )}
+                </div>
                 {(t.estadoCobro === 'pendiente' || t.estadoCobro === 'vencido') && (
-                  <Button size="sm" variant="ghost" onClick={() => marcarCobrado(t.id)}>
+                  <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); marcarCobrado(t.id); }}>
                     Marcar como cobrado ✓
                   </Button>
                 )}
@@ -264,8 +280,17 @@ export default function GremiosTrabajo() {
               const b = badgeFor(t);
               const color = t.estadoCobro === 'cobrado' ? 'text-emerald-600' : t.estadoCobro === 'vencido' ? 'text-red-600' : 'text-amber-600';
               return (
-                <TableRow key={t.id}>
-                  <TableCell className="font-medium max-w-xs truncate">{t.descripcion}</TableCell>
+                <TableRow key={t.id} className="cursor-pointer" onClick={() => setDetalleId(t.id)}>
+                  <TableCell className="font-medium max-w-xs truncate">
+                    <div className="flex items-center gap-2">
+                      {t.descripcion}
+                      {(t.bitacora?.length ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <BookOpen className="h-3 w-3" /> {t.bitacora!.length}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{t.cliente}</TableCell>
                   <TableCell className="text-muted-foreground max-w-xs truncate">{t.direccion}</TableCell>
                   <TableCell className="text-muted-foreground">{new Date(t.fecha).toLocaleDateString('es-AR')}</TableCell>
@@ -273,7 +298,7 @@ export default function GremiosTrabajo() {
                   <TableCell>
                     <Badge variant="outline" className={`text-xs ${b.cls}`}>{b.label}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     {(t.estadoCobro === 'pendiente' || t.estadoCobro === 'vencido') && (
                       <Button size="sm" variant="outline" onClick={() => marcarCobrado(t.id)}>
                         Cobrar ✓
@@ -316,6 +341,73 @@ export default function GremiosTrabajo() {
             <DialogDescription>Anotalo rápido. Después editás si querés.</DialogDescription>
           </DialogHeader>
           {FormFields}
+        </DialogContent>
+      </Dialog>
+
+      {/* Detalle del trabajo (mobile) */}
+      <Sheet open={!!detalle} onOpenChange={(o) => !o && setDetalleId(null)}>
+        <SheetContent side="bottom" className="h-[92vh] overflow-y-auto rounded-t-2xl xl:hidden">
+          {detalle && (
+            <>
+              <SheetHeader className="text-left">
+                <SheetTitle className="text-base">{detalle.descripcion}</SheetTitle>
+                <SheetDescription>
+                  {detalle.cliente} · {detalle.direccion}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-4 space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Monto</p>
+                    <p className="text-lg font-bold">{fmt(detalle.monto)}</p>
+                  </div>
+                  <Badge variant="outline" className={`text-xs ${badgeFor(detalle).cls}`}>
+                    {badgeFor(detalle).label}
+                  </Badge>
+                </div>
+                <BitacoraTrabajo
+                  entradas={detalle.bitacora ?? []}
+                  onAgregar={(e) => agregarEntrada(detalle.id, e)}
+                />
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Detalle del trabajo (desktop) */}
+      <Dialog open={!!detalle && typeof window !== 'undefined' && window.innerWidth >= 1280} onOpenChange={(o) => !o && setDetalleId(null)}>
+        <DialogContent className="hidden xl:block max-w-3xl max-h-[90vh] overflow-y-auto">
+          {detalle && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{detalle.descripcion}</DialogTitle>
+                <DialogDescription>
+                  {detalle.cliente} · {detalle.direccion} · {new Date(detalle.fecha).toLocaleDateString('es-AR')}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-4 grid grid-cols-3 gap-4 mb-4">
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Monto</p>
+                  <p className="text-lg font-bold">{fmt(detalle.monto)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Estado de cobro</p>
+                  <Badge variant="outline" className={`text-xs mt-1 ${badgeFor(detalle).cls}`}>
+                    {badgeFor(detalle).label}
+                  </Badge>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Estado del trabajo</p>
+                  <p className="text-sm font-medium mt-1 capitalize">{detalle.estadoTrabajo.replace('_', ' ')}</p>
+                </div>
+              </div>
+              <BitacoraTrabajo
+                entradas={detalle.bitacora ?? []}
+                onAgregar={(e) => agregarEntrada(detalle.id, e)}
+              />
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
