@@ -227,7 +227,7 @@ export default function GremiosAgenda() {
               <List className="h-3.5 w-3.5" /> Lista
             </button>
           </div>
-          <Button onClick={() => setShowForm(true)}>
+          <Button onClick={() => { setEditId(null); setForm(initialForm); setShowForm(true); }}>
             <Plus className="h-4 w-4 mr-2" />
             Agregar turno
           </Button>
@@ -298,7 +298,7 @@ export default function GremiosAgenda() {
             {/* Desktop: grid de cards más ricas */}
             <div className="hidden xl:grid grid-cols-2 2xl:grid-cols-3 gap-3">
               {turnosPorDia[dia].map((t) => (
-                <Card key={t.id} className="p-4 flex gap-3 hover:shadow-md transition-shadow">
+                <Card key={t.id} className="p-4 flex gap-3 hover:shadow-md transition-shadow group">
                   <div className={`w-1 rounded-full ${TIPO_COLOR[t.tipo]} flex-shrink-0`} />
                   <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center justify-between">
@@ -309,9 +309,27 @@ export default function GremiosAgenda() {
                           · {t.duracionMinutos} min
                         </span>
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border capitalize ${TIPO_BG[t.tipo]}`}>
-                        {t.tipo}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border capitalize ${TIPO_BG[t.tipo]}`}>
+                          {t.tipo}
+                        </span>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => abrirEditarTurno(t)}>
+                              <Pencil className="h-4 w-4 mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => eliminarTurnoAction(t.id)}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     <p className="text-sm font-medium">{t.titulo}</p>
                     {t.cliente && (
@@ -342,20 +360,20 @@ export default function GremiosAgenda() {
         <Plus className="h-6 w-6" />
       </Button>
 
-      <Sheet open={showForm && !isDesktop()} onOpenChange={setShowForm}>
+      <Sheet open={showForm && !isDesktop()} onOpenChange={(o) => { if (!o) cerrarForm(); }}>
         <SheetContent side="bottom" className="h-[90vh] overflow-y-auto rounded-t-2xl xl:hidden">
           <SheetHeader>
-            <SheetTitle>Nuevo turno</SheetTitle>
+            <SheetTitle>{editId ? 'Editar turno' : 'Nuevo turno'}</SheetTitle>
             <SheetDescription>Programá una visita, trabajo o cobro.</SheetDescription>
           </SheetHeader>
           {FormBody}
         </SheetContent>
       </Sheet>
 
-      <Dialog open={showForm && isDesktop()} onOpenChange={setShowForm}>
+      <Dialog open={showForm && isDesktop()} onOpenChange={(o) => { if (!o) cerrarForm(); }}>
         <DialogContent className="hidden xl:block max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nuevo turno</DialogTitle>
+            <DialogTitle>{editId ? 'Editar turno' : 'Nuevo turno'}</DialogTitle>
             <DialogDescription>Programá una visita, trabajo o cobro.</DialogDescription>
           </DialogHeader>
           {FormBody}
