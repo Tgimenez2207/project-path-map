@@ -1,9 +1,8 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Wrench, FileText, Calendar, Sparkles, Users } from 'lucide-react';
+import { Home, Wrench, FileText, Calendar, Sparkles, Users, ChevronRight, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { mockPerfilGremio } from '@/data/mockGremios';
 import { getRubroLabel } from '@/types/gremios';
-import { GremiosProvider } from '@/contexts/GremiosContext';
+import { GremiosProvider, useGremios } from '@/contexts/GremiosContext';
 
 function saludar(): string {
   const h = new Date().getHours();
@@ -22,11 +21,22 @@ const NAV_ITEMS = [
 ];
 
 export default function GremiosLayout() {
+  return (
+    <GremiosProvider>
+      <GremiosLayoutInner />
+    </GremiosProvider>
+  );
+}
+
+function GremiosLayoutInner() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { perfil } = useGremios();
 
   const isActive = (item: (typeof NAV_ITEMS)[number]) =>
     item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
+
+  const perfilActivo = location.pathname.startsWith('/portal/gremios/perfil');
 
   return (
     <GremiosProvider>
